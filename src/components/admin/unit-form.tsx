@@ -15,7 +15,7 @@ type StatRow = { key: string; value: string };
 type LevelRow = { level: number; cost: string; stats: StatRow[] };
 type PathRow = { label: string; levels: LevelRow[] };
 
-const STANDARD_STATS = ["damage", "range", "speed", "dps"];
+const STANDARD_STATS = ["damage", "range", "speed", "cost"];
 
 function emptyStats(): StatRow[] {
   return STANDARD_STATS.map((k) => ({ key: k, value: "" }));
