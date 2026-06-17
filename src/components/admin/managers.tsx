@@ -152,7 +152,7 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
         <Card className="p-10 text-center text-muted-foreground">No {kind} yet.</Card>
       ) : (
         <div className="grid gap-2">
-          {items.map((s) => (
+          {items.map((it: any) => { const s = it as any; return (
             <Card key={s.id} className="p-3 flex items-center gap-3">
               <div className="h-12 w-20 rounded bg-muted overflow-hidden shrink-0">
                 {s[imageField] && <img src={s[imageField]} alt="" className="h-full w-full object-cover" />}
