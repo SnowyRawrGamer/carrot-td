@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { rarityClass, RARITIES } from "@/lib/utils-slug";
 
-export const Route = createFileRoute("/units")({
+export const Route = createFileRoute("/units/")({
   head: () => ({
     meta: [
       { title: "Units — Carrot TD Values" },
