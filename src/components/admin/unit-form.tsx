@@ -213,7 +213,7 @@ export function UnitForm({ unitId, onDone }: { unitId?: string; onDone: () => vo
             <div key={pi} className="rounded-lg border p-4 bg-muted/30">
               <div className="flex items-center gap-3 mb-3">
                 <div className="font-semibold">Path {pi + 1}</div>
-                <Input className="max-w-xs" placeholder="Label (e.g. DPS path)" value={p.label}
+                <Input className="max-w-xs" placeholder="Label (e.g. Top path)" value={p.label}
                   onChange={(e) => setPaths(cur => cur.map((x, i) => i === pi ? { ...x, label: e.target.value } : x))} />
               </div>
               <div className="space-y-3">
