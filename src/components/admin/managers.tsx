@@ -207,7 +207,7 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
       queryKey: ["pool-entries", kind, existing?.id],
       enabled: !!existing?.id,
       queryFn: async () => {
-        const { data } = await supabase.from(entriesTable).select("unit_id, drop_rate").eq(fkCol, existing.id);
+        const { data } = await (supabase.from(entriesTable) as any).select("unit_id, drop_rate").eq(fkCol, existing.id);
         setEntries((data || []).map((e: any) => ({ unit_id: e.unit_id, drop_rate: String(e.drop_rate) })));
         setLoaded(true);
         return data;
@@ -225,7 +225,7 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
         if (id) {
           const { error } = await supabase.from(table).update(payload).eq("id", id);
           if (error) throw error;
-          await supabase.from(entriesTable).delete().eq(fkCol, id);
+          await (supabase.from(entriesTable) as any).delete().eq(fkCol, id);
         } else {
           const { data, error } = await supabase.from(table).insert(payload).select("id").single();
           if (error) throw error;
