@@ -179,7 +179,7 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
                 </AlertDialogContent>
               </AlertDialog>
             </Card>
-          ))}
+          ); })}
         </div>
       )}
     </div>
