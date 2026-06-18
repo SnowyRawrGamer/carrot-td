@@ -41,7 +41,7 @@ function SummonsPage() {
             <Link key={s.id} to="/summons/$slug" params={{ slug: s.slug }}>
               <Card className="overflow-hidden p-0 hover:shadow-md hover:border-primary/40 transition">
                 <div className="aspect-[16/9] bg-muted">
-                  {s.banner_url ? <img src={s.banner_url} alt={s.name} className="h-full w-full object-cover" /> :
+                  {s.banner_url ? <img src={s.banner_url} alt={s.name} className="h-full w-full object-contain" /> :
                     <div className="h-full w-full grid place-items-center text-muted-foreground"><Sparkles className="h-10 w-10" /></div>}
                 </div>
                 <div className="p-4">
