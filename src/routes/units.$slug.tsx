@@ -96,37 +96,42 @@ function UnitDetail() {
                 <Card className="p-5 text-sm text-muted-foreground">No upgrade paths added.</Card>
               ) : paths.map((p) => {
                 const pathLevels = levels.filter((l) => l.path_id === p.id);
-                const allStatKeys = Array.from(new Set(pathLevels.flatMap((l) => Object.keys((l.stats || {}) as StatsMap))));
+                const allStatKeys = Array.from(new Set([
+                  ...Object.keys(baseStats),
+                  ...pathLevels.flatMap((l) => Object.keys((l.stats || {}) as StatsMap)),
+                ])).filter((k) => k !== "cost");
+                const baseCost = (baseStats as any).cost;
                 return (
                   <Card key={p.id} className="p-5">
                     <h3 className="font-semibold mb-3">Path {p.path_index}{p.label ? ` — ${p.label}` : ""}</h3>
-                    {pathLevels.length === 0 ? (
-                      <p className="text-sm text-muted-foreground">No levels.</p>
-                    ) : (
-                      <div className="overflow-x-auto">
-                        <table className="w-full text-sm">
-                          <thead>
-                            <tr className="border-b text-left text-muted-foreground">
-                              <th className="py-2 pr-3 font-medium">Level</th>
-                              <th className="py-2 pr-3 font-medium">Cost</th>
-                              {allStatKeys.map((k) => <th key={k} className="py-2 pr-3 font-medium capitalize">{k}</th>)}
-                            </tr>
-                          </thead>
-                          <tbody>
-                            {pathLevels.map((l) => {
-                              const stats = (l.stats || {}) as StatsMap;
-                              return (
-                                <tr key={l.id} className="border-b last:border-0">
-                                  <td className="py-2 pr-3 font-semibold">{l.level}</td>
-                                  <td className="py-2 pr-3">{l.cost ?? "—"}</td>
-                                  {allStatKeys.map((k) => <td key={k} className="py-2 pr-3">{stats[k] != null ? String(stats[k]) : "—"}</td>)}
-                                </tr>
-                              );
-                            })}
-                          </tbody>
-                        </table>
-                      </div>
-                    )}
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-left text-muted-foreground">
+                            <th className="py-2 pr-3 font-medium">Level</th>
+                            <th className="py-2 pr-3 font-medium">Cost</th>
+                            {allStatKeys.map((k) => <th key={k} className="py-2 pr-3 font-medium capitalize">{k}</th>)}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          <tr className="border-b bg-muted/30">
+                            <td className="py-2 pr-3 font-semibold">0</td>
+                            <td className="py-2 pr-3">{baseCost != null ? String(baseCost) : "—"}</td>
+                            {allStatKeys.map((k) => <td key={k} className="py-2 pr-3">{baseStats[k] != null ? String(baseStats[k]) : "—"}</td>)}
+                          </tr>
+                          {pathLevels.map((l) => {
+                            const stats = (l.stats || {}) as StatsMap;
+                            return (
+                              <tr key={l.id} className="border-b last:border-0">
+                                <td className="py-2 pr-3 font-semibold">{l.level}</td>
+                                <td className="py-2 pr-3">{l.cost ?? "—"}</td>
+                                {allStatKeys.map((k) => <td key={k} className="py-2 pr-3">{stats[k] != null ? String(stats[k]) : "—"}</td>)}
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                      </table>
+                    </div>
                   </Card>
                 );
               })}

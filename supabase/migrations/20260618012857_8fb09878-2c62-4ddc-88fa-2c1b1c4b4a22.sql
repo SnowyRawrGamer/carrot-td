@@ -1,0 +1,1 @@
+CREATE POLICY "profiles owner read all" ON public.profiles FOR SELECT TO authenticated USING (public.has_role(auth.uid(), 'owner'));
