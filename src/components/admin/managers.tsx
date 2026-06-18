@@ -68,7 +68,7 @@ export function UnitsManager() {
           {units.map((u) => (
             <Card key={u.id} className="p-3 flex items-center gap-3">
               <div className="h-12 w-12 rounded bg-muted overflow-hidden shrink-0">
-                {u.photo_url ? <img src={u.photo_url} alt="" className="h-full w-full object-cover" /> : <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-5 w-5" /></div>}
+                {u.photo_url ? <img src={u.photo_url} alt="" className="h-full w-full object-contain" /> : <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-5 w-5" /></div>}
               </div>
               <div className="flex-1 min-w-0">
                 <div className="font-semibold truncate">{u.name}</div>
