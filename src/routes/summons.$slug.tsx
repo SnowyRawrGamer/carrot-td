@@ -103,4 +103,26 @@ function SummonDetail() {
           <h2 className="font-semibold">Pool ({entries.length} units)</h2>
           <span className="text-sm text-muted-foreground">Total: {total.toFixed(2)}%</span>
         </div>
-        {entries.length === 0 ?
+        {entries.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No units in this pool yet.</p>
+        ) : (
+          <div className="divide-y">
+            {sorted.map((e, i) => e.unit && (
+              <Link key={i} to="/units/$slug" params={{ slug: e.unit.slug }} className="flex items-center gap-3 py-3 hover:bg-accent/50 -mx-2 px-2 rounded">
+                <div className="h-12 w-12 rounded-md bg-muted overflow-hidden shrink-0">
+                  {e.unit.photo_url ? <img src={e.unit.photo_url} alt="" className="h-full w-full object-cover" /> :
+                    <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-5 w-5" /></div>}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="font-medium truncate">{e.unit.name}</div>
+                  {e.unit.rarity && <span className={`text-[10px] px-1.5 py-0.5 rounded border ${rarityClass(e.unit.rarity)}`}>{e.unit.rarity}</span>}
+                </div>
+                <div className="font-semibold tabular-nums">{Number(e.drop_rate).toFixed(2)}%</div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Card>
+    </Page>
+  );
+}
