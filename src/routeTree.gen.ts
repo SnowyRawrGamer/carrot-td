@@ -9,27 +9,17 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as SummonsRouteImport } from './routes/summons'
-import { Route as ChestsRouteImport } from './routes/chests'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as UnitsIndexRouteImport } from './routes/units.index'
+import { Route as SummonsIndexRouteImport } from './routes/summons.index'
+import { Route as ChestsIndexRouteImport } from './routes/chests.index'
 import { Route as UnitsSlugRouteImport } from './routes/units.$slug'
 import { Route as SummonsSlugRouteImport } from './routes/summons.$slug'
 import { Route as ChestsSlugRouteImport } from './routes/chests.$slug'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 
-const SummonsRoute = SummonsRouteImport.update({
-  id: '/summons',
-  path: '/summons',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChestsRoute = ChestsRouteImport.update({
-  id: '/chests',
-  path: '/chests',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -49,20 +39,30 @@ const UnitsIndexRoute = UnitsIndexRouteImport.update({
   path: '/units/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const SummonsIndexRoute = SummonsIndexRouteImport.update({
+  id: '/summons/',
+  path: '/summons/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ChestsIndexRoute = ChestsIndexRouteImport.update({
+  id: '/chests/',
+  path: '/chests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UnitsSlugRoute = UnitsSlugRouteImport.update({
   id: '/units/$slug',
   path: '/units/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SummonsSlugRoute = SummonsSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => SummonsRoute,
+  id: '/summons/$slug',
+  path: '/summons/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ChestsSlugRoute = ChestsSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => ChestsRoute,
+  id: '/chests/$slug',
+  path: '/chests/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   id: '/admin',
@@ -73,23 +73,23 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/chests': typeof ChestsRouteWithChildren
-  '/summons': typeof SummonsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
+  '/chests/': typeof ChestsIndexRoute
+  '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
-  '/chests': typeof ChestsRouteWithChildren
-  '/summons': typeof SummonsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
+  '/chests': typeof ChestsIndexRoute
+  '/summons': typeof SummonsIndexRoute
   '/units': typeof UnitsIndexRoute
 }
 export interface FileRoutesById {
@@ -97,12 +97,12 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
-  '/chests': typeof ChestsRouteWithChildren
-  '/summons': typeof SummonsRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
+  '/chests/': typeof ChestsIndexRoute
+  '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
 }
 export interface FileRouteTypes {
@@ -110,35 +110,35 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
-    | '/chests'
-    | '/summons'
     | '/admin'
     | '/chests/$slug'
     | '/summons/$slug'
     | '/units/$slug'
+    | '/chests/'
+    | '/summons/'
     | '/units/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
     | '/auth'
-    | '/chests'
-    | '/summons'
     | '/admin'
     | '/chests/$slug'
     | '/summons/$slug'
     | '/units/$slug'
+    | '/chests'
+    | '/summons'
     | '/units'
   id:
     | '__root__'
     | '/'
     | '/_authenticated'
     | '/auth'
-    | '/chests'
-    | '/summons'
     | '/_authenticated/admin'
     | '/chests/$slug'
     | '/summons/$slug'
     | '/units/$slug'
+    | '/chests/'
+    | '/summons/'
     | '/units/'
   fileRoutesById: FileRoutesById
 }
@@ -146,28 +146,16 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
-  ChestsRoute: typeof ChestsRouteWithChildren
-  SummonsRoute: typeof SummonsRouteWithChildren
+  ChestsSlugRoute: typeof ChestsSlugRoute
+  SummonsSlugRoute: typeof SummonsSlugRoute
   UnitsSlugRoute: typeof UnitsSlugRoute
+  ChestsIndexRoute: typeof ChestsIndexRoute
+  SummonsIndexRoute: typeof SummonsIndexRoute
   UnitsIndexRoute: typeof UnitsIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/summons': {
-      id: '/summons'
-      path: '/summons'
-      fullPath: '/summons'
-      preLoaderRoute: typeof SummonsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/chests': {
-      id: '/chests'
-      path: '/chests'
-      fullPath: '/chests'
-      preLoaderRoute: typeof ChestsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -196,6 +184,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof UnitsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/summons/': {
+      id: '/summons/'
+      path: '/summons'
+      fullPath: '/summons/'
+      preLoaderRoute: typeof SummonsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/chests/': {
+      id: '/chests/'
+      path: '/chests'
+      fullPath: '/chests/'
+      preLoaderRoute: typeof ChestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/units/$slug': {
       id: '/units/$slug'
       path: '/units/$slug'
@@ -205,17 +207,17 @@ declare module '@tanstack/react-router' {
     }
     '/summons/$slug': {
       id: '/summons/$slug'
-      path: '/$slug'
+      path: '/summons/$slug'
       fullPath: '/summons/$slug'
       preLoaderRoute: typeof SummonsSlugRouteImport
-      parentRoute: typeof SummonsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/chests/$slug': {
       id: '/chests/$slug'
-      path: '/$slug'
+      path: '/chests/$slug'
       fullPath: '/chests/$slug'
       preLoaderRoute: typeof ChestsSlugRouteImport
-      parentRoute: typeof ChestsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/_authenticated/admin': {
       id: '/_authenticated/admin'
@@ -238,35 +240,15 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-interface ChestsRouteChildren {
-  ChestsSlugRoute: typeof ChestsSlugRoute
-}
-
-const ChestsRouteChildren: ChestsRouteChildren = {
-  ChestsSlugRoute: ChestsSlugRoute,
-}
-
-const ChestsRouteWithChildren =
-  ChestsRoute._addFileChildren(ChestsRouteChildren)
-
-interface SummonsRouteChildren {
-  SummonsSlugRoute: typeof SummonsSlugRoute
-}
-
-const SummonsRouteChildren: SummonsRouteChildren = {
-  SummonsSlugRoute: SummonsSlugRoute,
-}
-
-const SummonsRouteWithChildren =
-  SummonsRoute._addFileChildren(SummonsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
-  ChestsRoute: ChestsRouteWithChildren,
-  SummonsRoute: SummonsRouteWithChildren,
+  ChestsSlugRoute: ChestsSlugRoute,
+  SummonsSlugRoute: SummonsSlugRoute,
   UnitsSlugRoute: UnitsSlugRoute,
+  ChestsIndexRoute: ChestsIndexRoute,
+  SummonsIndexRoute: SummonsIndexRoute,
   UnitsIndexRoute: UnitsIndexRoute,
 }
 export const routeTree = rootRouteImport
