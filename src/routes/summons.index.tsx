@@ -5,7 +5,7 @@ import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 
-export const Route = createFileRoute("/summons")({
+export const Route = createFileRoute("/summons/")({
   head: () => ({
     meta: [
       { title: "Summons — Carrot TD Values" },
