@@ -76,19 +76,23 @@ function ChestDetail() {
           </div>
           {results && (
             <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-              {results.map((unit, i) => unit && (
-                <Link key={i} to="/units/$slug" params={{ slug: unit.slug }}>
-                  <div className="rounded-lg border bg-muted/30 p-2 text-center hover:border-primary/40 transition">
-                    <div className="h-16 w-full rounded-md bg-muted overflow-hidden mb-2">
-                      {unit.photo_url
-                        ? <img src={unit.photo_url} alt="" className="h-full w-full object-contain" />
-                        : <div className="h-full w-full grid place-items-center text-muted-foreground"><Package className="h-6 w-6" /></div>}
+              {results.map((unit, i) => {
+                const entry = entries.find((e) => e.unit?.id === unit.id);
+                return unit && (
+                  <Link key={i} to="/units/$slug" params={{ slug: unit.slug }}>
+                    <div className="rounded-lg border bg-muted/30 p-2 text-center hover:border-primary/40 transition">
+                      <div className="h-16 w-full rounded-md bg-muted overflow-hidden mb-2">
+                        {unit.photo_url
+                          ? <img src={unit.photo_url} alt="" className="h-full w-full object-contain" />
+                          : <div className="h-full w-full grid place-items-center text-muted-foreground"><Package className="h-6 w-6" /></div>}
+                      </div>
+                      <div className="text-xs font-medium truncate">{unit.name}</div>
+                      {unit.rarity && <span className={`text-[10px] px-1 py-0.5 rounded border ${rarityClass(unit.rarity)}`}>{unit.rarity}</span>}
+                      {entry && <div className="text-[10px] text-muted-foreground mt-0.5">{Number(entry.drop_rate).toFixed(2)}%</div>}
                     </div>
-                    <div className="text-xs font-medium truncate">{unit.name}</div>
-                    {unit.rarity && <span className={`text-[10px] px-1 py-0.5 rounded border ${rarityClass(unit.rarity)}`}>{unit.rarity}</span>}
-                  </div>
-                </Link>
-              ))}
+                  </Link>
+                );
+              })}
             </div>
           )}
         </Card>
