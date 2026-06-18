@@ -41,7 +41,7 @@ function ChestsPage() {
             <Link key={c.id} to="/chests/$slug" params={{ slug: c.slug }}>
               <Card className="overflow-hidden p-0 hover:shadow-md hover:border-primary/40 transition">
                 <div className="aspect-[16/9] bg-muted">
-                  {c.image_url ? <img src={c.image_url} alt={c.name} className="h-full w-full object-cover" /> :
+                  {c.image_url ? <img src={c.image_url} alt={c.name} className="h-full w-full object-contain" /> :
                     <div className="h-full w-full grid place-items-center text-muted-foreground"><Package className="h-10 w-10" /></div>}
                 </div>
                 <div className="p-4">
