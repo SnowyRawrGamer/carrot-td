@@ -48,7 +48,7 @@ function UpdateDetail() {
 
       <Card className="overflow-hidden p-0 mb-6">
         <div className="aspect-[21/9] bg-muted">
-          {update.image_url ? <img src={update.image_url} alt={update.name} className="h-full w-full object-cover" /> :
+          {update.image_url ? <img src={update.image_url} alt={update.name} className="h-full w-full object-contain" /> :
             <div className="h-full w-full grid place-items-center text-muted-foreground"><Sparkles className="h-12 w-12" /></div>}
         </div>
         <div className="p-5">
