@@ -273,6 +273,102 @@ export type Database = {
         }
         Relationships: []
       }
+      update_chests: {
+        Row: {
+          chest_id: string
+          update_id: string
+        }
+        Insert: {
+          chest_id: string
+          update_id: string
+        }
+        Update: {
+          chest_id?: string
+          update_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "update_chests_chest_id_fkey"
+            columns: ["chest_id"]
+            isOneToOne: false
+            referencedRelation: "chests"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "update_chests_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      update_units: {
+        Row: {
+          unit_id: string
+          update_id: string
+        }
+        Insert: {
+          unit_id: string
+          update_id: string
+        }
+        Update: {
+          unit_id?: string
+          update_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "update_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "update_units_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      updates: {
+        Row: {
+          created_at: string
+          created_by: string | null
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          released_at: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          released_at?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          created_by?: string | null
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          released_at?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       user_roles: {
         Row: {
           created_at: string
