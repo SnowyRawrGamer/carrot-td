@@ -31,20 +31,41 @@ function UnitDetail() {
       const { data: levels } = pathIds.length
         ? await supabase.from("unit_upgrade_levels").select("*").in("path_id", pathIds).order("level")
         : { data: [] as any[] };
-      return { unit, paths: paths || [], levels: levels || [] };
+      const { data: updateLinks } = await supabase
+        .from("update_units")
+        .select("update:updates(id, slug, name, released_at)")
+        .eq("unit_id", unit.id);
+      const addedIn = (updateLinks || [])
+        .map((r: any) => r.update)
+        .filter(Boolean)
+        .sort((a: any, b: any) => (a.released_at || "").localeCompare(b.released_at || ""))[0] || null;
+      return { unit, paths: paths || [], levels: levels || [], addedIn };
     },
   });
 
   if (isLoading) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
   if (!data) return null;
-  const { unit, paths, levels } = data;
+  const { unit, paths, levels, addedIn } = data;
   const baseStats = (unit.base_stats || {}) as StatsMap;
+  const addedDate = addedIn?.released_at
+    ? new Date(addedIn.released_at + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+    : null;
 
   return (
     <Page>
       <Link to="/units" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowLeft className="h-4 w-4 mr-1" /> All units
       </Link>
+
+      {addedIn && (
+        <Card className="p-3 mb-4 bg-primary/5 border-primary/30 text-sm">
+          Added in{" "}
+          <Link to="/updates/$slug" params={{ slug: addedIn.slug }} className="font-semibold text-primary hover:underline">
+            {addedIn.name}
+          </Link>
+          {addedDate ? ` on ${addedDate}` : ""}.
+        </Card>
+      )}
 
       <div className="grid gap-6 md:grid-cols-[260px_1fr]">
         <Card className="overflow-hidden p-0">
