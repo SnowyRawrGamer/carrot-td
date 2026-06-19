@@ -83,7 +83,7 @@ function UnitsPage() {
               <Card className="overflow-hidden p-0 hover:shadow-md hover:border-primary/40 transition">
                 <div className="aspect-square bg-muted">
                   {u.photo_url ? (
-                    <img src={u.photo_url} alt={u.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform" />
+                    <img src={u.photo_url} alt={u.name} className="h-full w-full object-contain group-hover:scale-105 transition-transform" />
                   ) : (
                     <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-8 w-8" /></div>
                   )}
