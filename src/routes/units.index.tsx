@@ -5,6 +5,7 @@ import { Carrot, Search } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { supabase } from "@/integrations/supabase/client";
 import { rarityClass, RARITIES } from "@/lib/utils-slug";
 
@@ -18,18 +19,44 @@ export const Route = createFileRoute("/units/")({
   component: UnitsPage,
 });
 
+type SortMode = "alphabetical" | "newest" | "rarity";
+
+const RARITY_ORDER: Record<string, number> = {
+  common: 0,
+  uncommon: 1,
+  rare: 2,
+  "ultra-rare": 3,
+};
+
 function UnitsPage() {
   const [q, setQ] = useState("");
   const [rarity, setRarity] = useState<string>("All");
+  const [sort, setSort] = useState<SortMode>("alphabetical");
 
   const { data: units, isLoading } = useQuery({
     queryKey: ["units", "all"],
     queryFn: async () => {
       const { data, error } = await supabase
-        .from("units").select("id, slug, name, photo_url, rarity, tier")
+        .from("units")
+        .select("id, slug, name, photo_url, rarity, tier")
         .order("name");
       if (error) throw error;
-      return data;
+
+      const ids = (data || []).map((u) => u.id);
+      let addedDates: Record<string, string> = {};
+      if (ids.length) {
+        const { data: links } = await supabase
+          .from("update_units")
+          .select("unit_id, updates(released_at)")
+          .in("unit_id", ids);
+        for (const l of links || []) {
+          const released = (l as any).updates?.released_at;
+          if (released && (!addedDates[l.unit_id] || released > addedDates[l.unit_id])) {
+            addedDates[l.unit_id] = released;
+          }
+        }
+      }
+      return (data || []).map((u) => ({ ...u, added_at: addedDates[u.id] || null }));
     },
   });
 
@@ -37,6 +64,22 @@ function UnitsPage() {
     if (rarity !== "All" && (u.rarity || "").toLowerCase() !== rarity.toLowerCase()) return false;
     if (q && !u.name.toLowerCase().includes(q.toLowerCase())) return false;
     return true;
+  });
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sort === "alphabetical") return a.name.localeCompare(b.name);
+    if (sort === "newest") {
+      if (!a.added_at && !b.added_at) return 0;
+      if (!a.added_at) return 1;
+      if (!b.added_at) return -1;
+      return b.added_at.localeCompare(a.added_at);
+    }
+    if (sort === "rarity") {
+      const ra = RARITY_ORDER[(a.rarity || "").toLowerCase()] ?? -1;
+      const rb = RARITY_ORDER[(b.rarity || "").toLowerCase()] ?? -1;
+      return ra - rb;
+    }
+    return 0;
   });
 
   return (
@@ -51,6 +94,16 @@ function UnitsPage() {
             <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input placeholder="Search units..." value={q} onChange={(e) => setQ(e.target.value)} className="pl-9" />
           </div>
+          <Select value={sort} onValueChange={(v) => setSort(v as SortMode)}>
+            <SelectTrigger className="w-40">
+              <SelectValue placeholder="Sort by" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="alphabetical">Alphabetical</SelectItem>
+              <SelectItem value="newest">Newest</SelectItem>
+              <SelectItem value="rarity">Rarity</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
       </div>
 
@@ -68,7 +121,7 @@ function UnitsPage() {
 
       {isLoading ? (
         <div className="text-muted-foreground">Loading...</div>
-      ) : filtered.length === 0 ? (
+      ) : sorted.length === 0 ? (
         <Card className="p-12 text-center">
           <Carrot className="h-10 w-10 text-muted-foreground mx-auto" />
           <p className="mt-3 font-medium">No units found</p>
@@ -78,7 +131,7 @@ function UnitsPage() {
         </Card>
       ) : (
         <div className="grid gap-3 grid-cols-2 md:grid-cols-3 lg:grid-cols-5">
-          {filtered.map((u) => (
+          {sorted.map((u) => (
             <Link key={u.id} to="/units/$slug" params={{ slug: u.slug }} className="group">
               <Card className="overflow-hidden p-0 hover:shadow-md hover:border-primary/40 transition">
                 <div className="aspect-square bg-muted">
