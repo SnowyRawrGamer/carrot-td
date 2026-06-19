@@ -4,6 +4,7 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth, useMyRoles, isEditor, isOwner } from "@/lib/auth";
 import { UnitsManager, PoolManager } from "@/components/admin/managers";
+import { UpdatesManager } from "@/components/admin/updates-manager";
 import { EditorsManager } from "@/components/admin/editors-manager";
 import { Shield } from "lucide-react";
 
@@ -46,11 +47,13 @@ function AdminPage() {
           <TabsTrigger value="units">Units</TabsTrigger>
           <TabsTrigger value="summons">Summons</TabsTrigger>
           <TabsTrigger value="chests">Chests</TabsTrigger>
+          <TabsTrigger value="updates">Updates</TabsTrigger>
           {owner && <TabsTrigger value="editors">Editors</TabsTrigger>}
         </TabsList>
         <TabsContent value="units" className="mt-6"><UnitsManager /></TabsContent>
         <TabsContent value="summons" className="mt-6"><PoolManager kind="summons" /></TabsContent>
         <TabsContent value="chests" className="mt-6"><PoolManager kind="chests" /></TabsContent>
+        <TabsContent value="updates" className="mt-6"><UpdatesManager /></TabsContent>
         {owner && <TabsContent value="editors" className="mt-6"><EditorsManager /></TabsContent>}
       </Tabs>
     </Page>
