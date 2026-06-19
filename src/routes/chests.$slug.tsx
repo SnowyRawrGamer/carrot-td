@@ -36,16 +36,27 @@ function ChestDetail() {
         .from("chest_entries")
         .select("drop_rate, unit:units(id, slug, name, photo_url, rarity, tier)")
         .eq("chest_id", chest.id);
-      return { chest, entries: (entries || []) as any[] };
+      const { data: updateLinks } = await supabase
+        .from("update_chests")
+        .select("update:updates(id, slug, name, released_at)")
+        .eq("chest_id", chest.id);
+      const addedIn = (updateLinks || [])
+        .map((r: any) => r.update)
+        .filter(Boolean)
+        .sort((a: any, b: any) => (a.released_at || "").localeCompare(b.released_at || ""))[0] || null;
+      return { chest, entries: (entries || []) as any[], addedIn };
     },
   });
 
   if (isLoading) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
   if (!data) return <Page><Card className="p-8 text-center">Chest not found.</Card></Page>;
-  const { chest, entries } = data;
+  const { chest, entries, addedIn } = data;
   const total = entries.reduce((s, e) => s + Number(e.drop_rate || 0), 0);
   const sorted = [...entries].sort((a, b) => Number(b.drop_rate) - Number(a.drop_rate));
   const canSimulate = entries.length > 0;
+  const addedDate = addedIn?.released_at
+    ? new Date(addedIn.released_at + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
+    : null;
 
   function rollOne() { setResults([weightedRoll(entries)]); }
   function rollTen() { setResults(Array.from({ length: 10 }, () => weightedRoll(entries))); }
@@ -55,6 +66,15 @@ function ChestDetail() {
       <Link to="/chests" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowLeft className="h-4 w-4 mr-1" /> All chests
       </Link>
+      {addedIn && (
+        <Card className="p-3 mb-4 bg-primary/5 border-primary/30 text-sm">
+          Added in{" "}
+          <Link to="/updates/$slug" params={{ slug: addedIn.slug }} className="font-semibold text-primary hover:underline">
+            {addedIn.name}
+          </Link>
+          {addedDate ? ` on ${addedDate}` : ""}.
+        </Card>
+      )}
       <Card className="overflow-hidden p-0 mb-6">
         <div className="aspect-[21/9] bg-muted">
           {chest.image_url ? <img src={chest.image_url} alt={chest.name} className="h-full w-full object-contain" /> :

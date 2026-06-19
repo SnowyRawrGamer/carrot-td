@@ -12,9 +12,11 @@ import { Route as rootRouteImport } from './routes/__root'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as UpdatesIndexRouteImport } from './routes/updates.index'
 import { Route as UnitsIndexRouteImport } from './routes/units.index'
 import { Route as SummonsIndexRouteImport } from './routes/summons.index'
 import { Route as ChestsIndexRouteImport } from './routes/chests.index'
+import { Route as UpdatesSlugRouteImport } from './routes/updates.$slug'
 import { Route as UnitsSlugRouteImport } from './routes/units.$slug'
 import { Route as SummonsSlugRouteImport } from './routes/summons.$slug'
 import { Route as ChestsSlugRouteImport } from './routes/chests.$slug'
@@ -34,6 +36,11 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const UpdatesIndexRoute = UpdatesIndexRouteImport.update({
+  id: '/updates/',
+  path: '/updates/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const UnitsIndexRoute = UnitsIndexRouteImport.update({
   id: '/units/',
   path: '/units/',
@@ -47,6 +54,11 @@ const SummonsIndexRoute = SummonsIndexRouteImport.update({
 const ChestsIndexRoute = ChestsIndexRouteImport.update({
   id: '/chests/',
   path: '/chests/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const UpdatesSlugRoute = UpdatesSlugRouteImport.update({
+  id: '/updates/$slug',
+  path: '/updates/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
 const UnitsSlugRoute = UnitsSlugRouteImport.update({
@@ -77,9 +89,11 @@ export interface FileRoutesByFullPath {
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
+  '/updates/$slug': typeof UpdatesSlugRoute
   '/chests/': typeof ChestsIndexRoute
   '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
+  '/updates/': typeof UpdatesIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -88,9 +102,11 @@ export interface FileRoutesByTo {
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
+  '/updates/$slug': typeof UpdatesSlugRoute
   '/chests': typeof ChestsIndexRoute
   '/summons': typeof SummonsIndexRoute
   '/units': typeof UnitsIndexRoute
+  '/updates': typeof UpdatesIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -101,9 +117,11 @@ export interface FileRoutesById {
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
+  '/updates/$slug': typeof UpdatesSlugRoute
   '/chests/': typeof ChestsIndexRoute
   '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
+  '/updates/': typeof UpdatesIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -114,9 +132,11 @@ export interface FileRouteTypes {
     | '/chests/$slug'
     | '/summons/$slug'
     | '/units/$slug'
+    | '/updates/$slug'
     | '/chests/'
     | '/summons/'
     | '/units/'
+    | '/updates/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -125,9 +145,11 @@ export interface FileRouteTypes {
     | '/chests/$slug'
     | '/summons/$slug'
     | '/units/$slug'
+    | '/updates/$slug'
     | '/chests'
     | '/summons'
     | '/units'
+    | '/updates'
   id:
     | '__root__'
     | '/'
@@ -137,9 +159,11 @@ export interface FileRouteTypes {
     | '/chests/$slug'
     | '/summons/$slug'
     | '/units/$slug'
+    | '/updates/$slug'
     | '/chests/'
     | '/summons/'
     | '/units/'
+    | '/updates/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -149,9 +173,11 @@ export interface RootRouteChildren {
   ChestsSlugRoute: typeof ChestsSlugRoute
   SummonsSlugRoute: typeof SummonsSlugRoute
   UnitsSlugRoute: typeof UnitsSlugRoute
+  UpdatesSlugRoute: typeof UpdatesSlugRoute
   ChestsIndexRoute: typeof ChestsIndexRoute
   SummonsIndexRoute: typeof SummonsIndexRoute
   UnitsIndexRoute: typeof UnitsIndexRoute
+  UpdatesIndexRoute: typeof UpdatesIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -177,6 +203,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/updates/': {
+      id: '/updates/'
+      path: '/updates'
+      fullPath: '/updates/'
+      preLoaderRoute: typeof UpdatesIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/units/': {
       id: '/units/'
       path: '/units'
@@ -196,6 +229,13 @@ declare module '@tanstack/react-router' {
       path: '/chests'
       fullPath: '/chests/'
       preLoaderRoute: typeof ChestsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/updates/$slug': {
+      id: '/updates/$slug'
+      path: '/updates/$slug'
+      fullPath: '/updates/$slug'
+      preLoaderRoute: typeof UpdatesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/units/$slug': {
@@ -247,9 +287,11 @@ const rootRouteChildren: RootRouteChildren = {
   ChestsSlugRoute: ChestsSlugRoute,
   SummonsSlugRoute: SummonsSlugRoute,
   UnitsSlugRoute: UnitsSlugRoute,
+  UpdatesSlugRoute: UpdatesSlugRoute,
   ChestsIndexRoute: ChestsIndexRoute,
   SummonsIndexRoute: SummonsIndexRoute,
   UnitsIndexRoute: UnitsIndexRoute,
+  UpdatesIndexRoute: UpdatesIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
