@@ -1,7 +1,10 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useState } from "react";
 import { Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
@@ -9,13 +12,14 @@ type RoleKind = "owner" | "editor" | "viewer";
 
 export function EditorsManager() {
   const qc = useQueryClient();
+  const [edits, setEdits] = useState<Record<string, string>>({});
 
   const { data: rows } = useQuery({
     queryKey: ["all-users-roles"],
     queryFn: async () => {
       const { data: profiles, error } = await supabase
         .from("profiles")
-        .select("id, email, display_name")
+        .select("id, email, display_name, public_name")
         .order("email");
       if (error) throw error;
       const ids = (profiles || []).map((p) => p.id);
@@ -34,8 +38,6 @@ export function EditorsManager() {
 
   const changeRole = useMutation({
     mutationFn: async ({ userId, newRole }: { userId: string; newRole: RoleKind }) => {
-      // Remove any existing role rows for this user, then insert the new one
-      // (unless the new role is 'viewer', which we treat as "no row").
       const { error: delErr } = await supabase.from("user_roles").delete().eq("user_id", userId);
       if (delErr) throw delErr;
       if (newRole !== "viewer") {
@@ -50,18 +52,31 @@ export function EditorsManager() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const updatePublicName = useMutation({
+    mutationFn: async ({ userId, name }: { userId: string; name: string }) => {
+      const { error } = await supabase.from("profiles").update({ public_name: name }).eq("id", userId);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Public name updated");
+      qc.invalidateQueries({ queryKey: ["all-users-roles"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-4">
       <div>
         <h2 className="text-xl font-bold">Users & roles</h2>
         <p className="text-sm text-muted-foreground">
-          Every signed-in user shows here. Owners can promote anyone to editor or owner.
+          Every signed-in user shows here. Owners can promote anyone to editor or owner, and set the
+          public display name shown on the Editors page.
         </p>
       </div>
 
       <div className="grid gap-2">
         {(rows || []).map((u) => (
-          <Card key={u.id} className="p-3 flex items-center gap-3">
+          <Card key={u.id} className="p-3 flex items-center gap-3 flex-wrap">
             <Shield
               className={`h-5 w-5 ${
                 u.role === "owner" ? "text-primary" : u.role === "editor" ? "text-foreground" : "text-muted-foreground"
@@ -71,6 +86,23 @@ export function EditorsManager() {
               <div className="font-medium truncate">{u.display_name || u.email || u.id}</div>
               <div className="text-xs text-muted-foreground">{u.email}</div>
             </div>
+
+            <Input
+              placeholder="Public name on Editors page"
+              defaultValue={u.public_name || ""}
+              className="w-48"
+              onChange={(e) => setEdits((prev) => ({ ...prev, [u.id]: e.target.value }))}
+            />
+            <Button
+              size="sm"
+              variant="secondary"
+              onClick={() =>
+                updatePublicName.mutate({ userId: u.id, name: edits[u.id] ?? u.public_name ?? "" })
+              }
+            >
+              Save name
+            </Button>
+
             <Select
               value={u.role}
               onValueChange={(v) => changeRole.mutate({ userId: u.id, newRole: v as RoleKind })}
