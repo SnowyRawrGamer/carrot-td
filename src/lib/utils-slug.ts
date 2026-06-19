@@ -7,7 +7,7 @@ export function slugify(input: string): string {
     .slice(0, 60);
 }
 
-export const RARITIES = ["Common", "Uncommon", "Rare", "Ultra-rare"] as const;
+export const RARITIES = ["Common", "Uncommon", "Rare", "Ultra-Rare"] as const;
 export type Rarity = (typeof RARITIES)[number];
 
 export function rarityClass(rarity?: string | null): string {
