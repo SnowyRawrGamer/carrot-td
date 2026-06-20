@@ -26,17 +26,17 @@ function CommunityLoadoutDetail() {
     queryKey: ["community-loadout", id],
     queryFn: async () => {
       const { data: loadout, error } = await supabase
-        .from("community_loadouts")
-        .select("id, title, description, show_real_name, custom_display_name, creator_id, profiles:creator_id(display_name, email)")
+        .from("public_loadouts")
+        .select("id, title, description, display_name")
         .eq("id", id)
         .single();
       if (error) throw error;
 
-      const { data: loadout, error } = await supabase
-  .from("public_loadouts")
-  .select("id, title, description, display_name")
-  .eq("id", id)
-  .single();
+      const { data: links } = await supabase
+        .from("community_loadout_units")
+        .select("unit_id, path_index, level, slot_index")
+        .eq("loadout_id", id)
+        .order("slot_index");
 
       const { data: score } = await supabase.from("community_loadout_scores").select("score").eq("loadout_id", id).maybeSingle();
 
@@ -111,7 +111,7 @@ function CommunityLoadoutDetail() {
         </div>
         <div>
           <h1 className="text-3xl font-bold">{loadout.title}</h1>
-          <p className="text-sm text-muted-foreground">by {displayName}</p>
+          <p className="text-sm text-muted-foreground">by {loadout.display_name}</p>
           {loadout.description && <p className="mt-3 text-sm">{loadout.description}</p>}
         </div>
       </div>
