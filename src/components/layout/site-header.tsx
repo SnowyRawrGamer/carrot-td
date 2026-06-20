@@ -9,6 +9,7 @@ const navItems = [
   { to: "/summons", label: "Summons" },
   { to: "/chests", label: "Chests" },
   { to: "/updates", label: "Updates" },
+  { to: "/loadouts", label: "Loadouts" },
 ];
 
 export function SiteHeader() {
