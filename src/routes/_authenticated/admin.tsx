@@ -7,6 +7,7 @@ import { UnitsManager, PoolManager } from "@/components/admin/managers";
 import { UpdatesManager } from "@/components/admin/updates-manager";
 import { EditorsManager } from "@/components/admin/editors-manager";
 import { AuditLog } from "@/components/admin/audit-log";
+import { LoadoutsManager } from "@/components/admin/loadouts-manager";
 import { Shield } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -49,6 +50,7 @@ function AdminPage() {
           <TabsTrigger value="summons">Summons</TabsTrigger>
           <TabsTrigger value="chests">Chests</TabsTrigger>
           <TabsTrigger value="updates">Updates</TabsTrigger>
+          <TabsTrigger value="loadouts">Loadouts</TabsTrigger>
           {owner && <TabsTrigger value="editors">Editors</TabsTrigger>}
           {owner && <TabsTrigger value="logs">Logs</TabsTrigger>}
         </TabsList>
@@ -56,6 +58,7 @@ function AdminPage() {
         <TabsContent value="summons" className="mt-6"><PoolManager kind="summons" /></TabsContent>
         <TabsContent value="chests" className="mt-6"><PoolManager kind="chests" /></TabsContent>
         <TabsContent value="updates" className="mt-6"><UpdatesManager /></TabsContent>
+        <TabsContent value="loadouts" className="mt-6"><LoadoutsManager /></TabsContent>
         {owner && <TabsContent value="editors" className="mt-6"><EditorsManager /></TabsContent>}
         {owner && <TabsContent value="logs" className="mt-6"><AuditLog /></TabsContent>}
       </Tabs>
