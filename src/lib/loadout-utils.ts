@@ -8,9 +8,12 @@ export interface ResolvedUnit {
   slug: string;
   photo_url: string | null;
   rarity: string | null;
-  stats: StatsMap;
+  stats: StatsMap; // gameplay stats (damage, range, cooldown, etc) — "cost" here is always placement cost
+  placementCost: number; // cost to place the unit (never changes with upgrades)
+  upgradeCost: number; // cumulative cost spent on upgrades to reach the selected level
+  totalCost: number; // placementCost + upgradeCost
   missingPlacement: boolean;
-  placementValue: number; // max placement allowed (or 1 if missing)
+  placementValue: number;
 }
 
 export async function fetchUnitWithUpgrades(unitId: string) {
@@ -41,7 +44,9 @@ export function resolveUnitStats(
   levels: any[],
   selection: { pathIndex: number | null; level: number }
 ): ResolvedUnit {
+  const placementCost = Number(unit.base_stats?.["cost"] ?? 0) || 0;
   let stats: StatsMap = { ...(unit.base_stats || {}) };
+  let upgradeCost = 0;
 
   if (selection.pathIndex !== null && selection.level > 0) {
     const path = paths.find((p) => p.path_index === selection.pathIndex);
@@ -50,10 +55,14 @@ export function resolveUnitStats(
         .filter((l) => l.path_id === path.id && l.level <= selection.level)
         .sort((a, b) => a.level - b.level);
       for (const lvl of pathLevels) {
-        stats = { ...stats, ...(lvl.stats || {}) };
+        const { cost: levelUpgradeCost, ...rest } = lvl.stats || {};
+        stats = { ...stats, ...rest }; // merge everything EXCEPT cost (cost is an upgrade price, not a stat override)
+        upgradeCost += Number(levelUpgradeCost ?? 0) || 0;
       }
     }
   }
+
+  stats["cost"] = placementCost; // always the real placement cost, never overridden by a level's upgrade price
 
   const { value, missing } = getPlacement(stats);
 
@@ -64,28 +73,33 @@ export function resolveUnitStats(
     photo_url: unit.photo_url,
     rarity: unit.rarity,
     stats,
+    placementCost,
+    upgradeCost,
+    totalCost: placementCost + upgradeCost,
     missingPlacement: missing,
     placementValue: value,
   };
 }
 
-/** Returns all level rows for a given path, with stats merged cumulatively (base -> level 1 -> level 2 -> ...). */
+/** Returns all level rows for a path. "cost" shown per row is that level's upgrade price (not merged), every other stat is cumulative. */
 export function levelBreakdown(unit: any, paths: any[], levels: any[], pathIndex: number) {
   const path = paths.find((p) => p.path_index === pathIndex);
   if (!path) return [];
   const pathLevels = levels.filter((l) => l.path_id === path.id).sort((a, b) => a.level - b.level);
   let running: StatsMap = { ...(unit.base_stats || {}) };
-  const rows: { level: number; stats: StatsMap }[] = [{ level: 0, stats: { ...running } }];
+  const baseCost = Number(unit.base_stats?.["cost"] ?? 0) || 0;
+  const rows: { level: number; stats: StatsMap; upgradeCost: number }[] = [{ level: 0, stats: { ...running, cost: baseCost }, upgradeCost: 0 }];
   for (const lvl of pathLevels) {
-    running = { ...running, ...(lvl.stats || {}) };
-    rows.push({ level: lvl.level, stats: { ...running } });
+    const { cost: levelUpgradeCost, ...rest } = lvl.stats || {};
+    running = { ...running, ...rest };
+    rows.push({ level: lvl.level, stats: { ...running, cost: baseCost }, upgradeCost: Number(levelUpgradeCost ?? 0) || 0 });
   }
   return rows;
 }
 
 export interface SlotForTotals {
   resolved: ResolvedUnit;
-  placementCount: number; // user-chosen count, 1 to resolved.placementValue
+  placementCount: number;
 }
 
 export interface LoadoutTotals {
@@ -101,9 +115,8 @@ export function computeLoadoutTotals(slots: SlotForTotals[]): LoadoutTotals {
 
   for (const { resolved: u, placementCount } of slots) {
     const damage = Number(u.stats["damage"] ?? 0) || 0;
-    const cost = Number(u.stats["cost"] ?? 0) || 0;
     totalDamage += damage * placementCount;
-    totalCost += cost;
+    totalCost += u.totalCost * placementCount;
     if (u.missingPlacement) missingPlacementUnits.push(u.name);
   }
 
