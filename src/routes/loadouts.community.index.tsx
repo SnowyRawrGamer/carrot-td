@@ -23,10 +23,9 @@ function CommunityLoadouts() {
     queryKey: ["community-loadouts"],
     queryFn: async () => {
       const { data: rows, error } = await supabase
-        .from("community_loadouts")
-        .select("id, title, description, show_real_name, custom_display_name, created_at, creator_id, profiles:creator_id(display_name, email)")
-        .eq("status", "approved")
-        .order("created_at", { ascending: false });
+  .from("public_loadouts")
+  .select("id, title, description, created_at, display_name")
+  .order("created_at", { ascending: false });
       if (error) throw error;
 
       const ids = (rows || []).map((r) => r.id);
