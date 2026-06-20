@@ -1,5 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, X, Trash2 } from "lucide-react";
+import { useState } from "react";
+import { Check, X, Trash2, Carrot, ChevronDown, ChevronUp } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -8,6 +9,7 @@ import { toast } from "sonner";
 
 export function LoadoutsManager() {
   const qc = useQueryClient();
+  const [expanded, setExpanded] = useState<string | null>(null);
 
   const { data: loadouts } = useQuery({
     queryKey: ["admin-loadouts"],
@@ -17,7 +19,21 @@ export function LoadoutsManager() {
         .select("id, title, description, status, created_at, show_real_name, custom_display_name, profiles:creator_id(display_name, email)")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+
+      const ids = (data || []).map((l) => l.id);
+      const { data: units } = ids.length
+        ? await supabase
+            .from("community_loadout_units")
+            .select("loadout_id, slot_index, path_index, level, placement_count, unit:units(name, photo_url, rarity)")
+            .in("loadout_id", ids)
+            .order("slot_index")
+        : { data: [] as any[] };
+      const unitsMap: Record<string, any[]> = {};
+      for (const u of units || []) {
+        if (!unitsMap[u.loadout_id]) unitsMap[u.loadout_id] = [];
+        unitsMap[u.loadout_id].push(u);
+      }
+      return (data || []).map((l) => ({ ...l, units: unitsMap[l.id] || [] }));
     },
   });
 
@@ -44,19 +60,46 @@ export function LoadoutsManager() {
 
   function Row({ l }: { l: any }) {
     const who = l.show_real_name ? (l.profiles?.display_name || l.profiles?.email) : l.custom_display_name;
+    const isOpen = expanded === l.id;
     return (
-      <Card className="p-3 flex items-center gap-3">
-        <div className="flex-1 min-w-0">
-          <div className="font-medium truncate">{l.title}</div>
-          <div className="text-xs text-muted-foreground truncate">by {who} · {new Date(l.created_at).toLocaleDateString()}</div>
+      <Card className="p-3">
+        <div className="flex items-center gap-3">
+          <button onClick={() => setExpanded(isOpen ? null : l.id)} className="flex-1 min-w-0 text-left flex items-center gap-2">
+            {isOpen ? <ChevronUp className="h-4 w-4 shrink-0" /> : <ChevronDown className="h-4 w-4 shrink-0" />}
+            <div>
+              <div className="font-medium truncate">{l.title}</div>
+              <div className="text-xs text-muted-foreground truncate">by {who} · {new Date(l.created_at).toLocaleDateString()}</div>
+            </div>
+          </button>
+          {l.status === "pending" ? (
+            <>
+              <Button size="sm" onClick={() => setStatus.mutate({ id: l.id, status: "approved" })}><Check className="h-4 w-4 mr-1" /> Approve</Button>
+              <Button size="sm" variant="outline" onClick={() => setStatus.mutate({ id: l.id, status: "rejected" })}><X className="h-4 w-4 mr-1" /> Reject</Button>
+            </>
+          ) : (
+            <Button size="sm" variant="destructive" onClick={() => remove.mutate(l.id)}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
+          )}
         </div>
-        {l.status === "pending" ? (
-          <>
-            <Button size="sm" onClick={() => setStatus.mutate({ id: l.id, status: "approved" })}><Check className="h-4 w-4 mr-1" /> Approve</Button>
-            <Button size="sm" variant="outline" onClick={() => setStatus.mutate({ id: l.id, status: "rejected" })}><X className="h-4 w-4 mr-1" /> Reject</Button>
-          </>
-        ) : (
-          <Button size="sm" variant="destructive" onClick={() => remove.mutate(l.id)}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
+
+        {isOpen && (
+          <div className="mt-3 pt-3 border-t space-y-3">
+            {l.description && <p className="text-sm text-muted-foreground">{l.description}</p>}
+            <div className="grid gap-2 sm:grid-cols-2">
+              {l.units.map((u: any, i: number) => (
+                <div key={i} className="flex items-center gap-2 rounded-md border p-2">
+                  <div className="h-10 w-10 rounded bg-muted overflow-hidden shrink-0">
+                    {u.unit?.photo_url ? <img src={u.unit.photo_url} alt="" className="h-full w-full object-contain" /> : <Carrot className="h-4 w-4 m-auto mt-3 text-muted-foreground" />}
+                  </div>
+                  <div className="text-xs">
+                    <div className="font-medium">{u.unit?.name}</div>
+                    <div className="text-muted-foreground">
+                      {u.path_index !== null ? `Path ${u.path_index}, Lvl ${u.level}` : "Base"} · {u.placement_count}x placed
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
         )}
       </Card>
     );
