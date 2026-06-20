@@ -8,9 +8,9 @@ export interface ResolvedUnit {
   slug: string;
   photo_url: string | null;
   rarity: string | null;
-  stats: StatsMap; // gameplay stats — "cost" here is always placement cost
+  stats: StatsMap;
   placementCost: number;
-  upgradeCost: number; // cumulative upgrade cost to reach selected level, from the dedicated cost column
+  upgradeCost: number;
   totalCost: number;
   missingPlacement: boolean;
   placementValue: number;
@@ -55,70 +55,56 @@ export function resolveUnitStats(
         .filter((l) => l.path_id === path.id && l.level <= selection.level)
         .sort((a, b) => a.level - b.level);
       for (const lvl of pathLevels) {
-        const { cost: _ignoredStatsCost, ...rest } = lvl.stats || {}; // ignore any leftover "cost" inside stats JSON
+        const { cost: _ignored, ...rest } = lvl.stats || {};
         stats = { ...stats, ...rest };
-        upgradeCost += Number(lvl.cost ?? 0) || 0; // real upgrade price lives in the dedicated column
+        upgradeCost += Number(lvl.cost ?? 0) || 0;
       }
     }
   }
 
   stats["cost"] = placementCost;
-
   const { value, missing } = getPlacement(stats);
 
   return {
-    id: unit.id,
-    name: unit.name,
-    slug: unit.slug,
-    photo_url: unit.photo_url,
-    rarity: unit.rarity,
-    stats,
-    placementCost,
-    upgradeCost,
-    totalCost: placementCost + upgradeCost,
-    missingPlacement: missing,
-    placementValue: value,
+    id: unit.id, name: unit.name, slug: unit.slug, photo_url: unit.photo_url, rarity: unit.rarity,
+    stats, placementCost, upgradeCost, totalCost: placementCost + upgradeCost,
+    missingPlacement: missing, placementValue: value,
   };
 }
 
-/** All level rows for a path. "cost" per row = that level's upgrade price (dedicated column), every other stat is cumulative. */
+/** Level rows for a path. Gameplay stats are cumulative (no "cost" key in here anymore — see upgradeCost instead). */
 export function levelBreakdown(unit: any, paths: any[], levels: any[], pathIndex: number) {
   const path = paths.find((p) => p.path_index === pathIndex);
   if (!path) return [];
   const pathLevels = levels.filter((l) => l.path_id === path.id).sort((a, b) => a.level - b.level);
   let running: StatsMap = { ...(unit.base_stats || {}) };
+  delete running["cost"]; // cost is shown via upgradeCost/cumulativeCost, not as a gameplay stat column
   const baseCost = Number(unit.base_stats?.["cost"] ?? 0) || 0;
-  const rows: { level: number; stats: StatsMap; upgradeCost: number }[] = [{ level: 0, stats: { ...running, cost: baseCost }, upgradeCost: 0 }];
+  const rows: { level: number; stats: StatsMap; upgradeCost: number; cumulativeCost: number }[] = [
+    { level: 0, stats: { ...running }, upgradeCost: 0, cumulativeCost: baseCost },
+  ];
+  let cumulative = baseCost;
   for (const lvl of pathLevels) {
-    const { cost: _ignoredStatsCost, ...rest } = lvl.stats || {};
+    const { cost: _ignored, ...rest } = lvl.stats || {};
     running = { ...running, ...rest };
-    rows.push({ level: lvl.level, stats: { ...running, cost: baseCost }, upgradeCost: Number(lvl.cost ?? 0) || 0 });
+    const lvlCost = Number(lvl.cost ?? 0) || 0;
+    cumulative += lvlCost;
+    rows.push({ level: lvl.level, stats: { ...running }, upgradeCost: lvlCost, cumulativeCost: cumulative });
   }
   return rows;
 }
 
-export interface SlotForTotals {
-  resolved: ResolvedUnit;
-  placementCount: number;
-}
-
-export interface LoadoutTotals {
-  totalDamage: number;
-  totalCost: number;
-  missingPlacementUnits: string[];
-}
+export interface SlotForTotals { resolved: ResolvedUnit; placementCount: number; }
+export interface LoadoutTotals { totalDamage: number; totalCost: number; missingPlacementUnits: string[]; }
 
 export function computeLoadoutTotals(slots: SlotForTotals[]): LoadoutTotals {
-  let totalDamage = 0;
-  let totalCost = 0;
+  let totalDamage = 0, totalCost = 0;
   const missingPlacementUnits: string[] = [];
-
   for (const { resolved: u, placementCount } of slots) {
     const damage = Number(u.stats["damage"] ?? 0) || 0;
     totalDamage += damage * placementCount;
     totalCost += u.totalCost * placementCount;
     if (u.missingPlacement) missingPlacementUnits.push(u.name);
   }
-
   return { totalDamage, totalCost, missingPlacementUnits };
 }
