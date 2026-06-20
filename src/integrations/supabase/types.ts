@@ -14,6 +14,51 @@ export type Database = {
   }
   public: {
     Tables: {
+      audit_log: {
+        Row: {
+          changed_at: string
+          changed_by: string | null
+          changes: Json
+          id: string
+          record_id: string
+          record_label: string | null
+          table_name: string
+        }
+        Insert: {
+          changed_at?: string
+          changed_by?: string | null
+          changes: Json
+          id?: string
+          record_id: string
+          record_label?: string | null
+          table_name: string
+        }
+        Update: {
+          changed_at?: string
+          changed_by?: string | null
+          changes?: Json
+          id?: string
+          record_id?: string
+          record_label?: string | null
+          table_name?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       chest_entries: {
         Row: {
           chest_id: string
@@ -80,6 +125,159 @@ export type Database = {
         }
         Relationships: []
       }
+      community_loadout_units: {
+        Row: {
+          id: string
+          level: number
+          loadout_id: string
+          path_index: number | null
+          placement_count: number
+          slot_index: number
+          unit_id: string
+        }
+        Insert: {
+          id?: string
+          level?: number
+          loadout_id: string
+          path_index?: number | null
+          placement_count?: number
+          slot_index: number
+          unit_id: string
+        }
+        Update: {
+          id?: string
+          level?: number
+          loadout_id?: string
+          path_index?: number | null
+          placement_count?: number
+          slot_index?: number
+          unit_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_loadout_units_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "community_loadouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_loadout_units_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "public_loadouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_loadout_units_unit_id_fkey"
+            columns: ["unit_id"]
+            isOneToOne: false
+            referencedRelation: "units"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_loadout_votes: {
+        Row: {
+          created_at: string
+          id: string
+          loadout_id: string
+          user_id: string
+          vote: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          loadout_id: string
+          user_id: string
+          vote: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          loadout_id?: string
+          user_id?: string
+          vote?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_loadout_votes_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "community_loadouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_loadout_votes_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "public_loadouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_loadout_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_loadout_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      community_loadouts: {
+        Row: {
+          created_at: string
+          creator_id: string
+          custom_display_name: string | null
+          description: string | null
+          id: string
+          show_real_name: boolean
+          status: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          custom_display_name?: string | null
+          description?: string | null
+          id?: string
+          show_real_name?: boolean
+          status?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          custom_display_name?: string | null
+          description?: string | null
+          id?: string
+          show_real_name?: boolean
+          status?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_loadouts_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_loadouts_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -87,6 +285,7 @@ export type Database = {
           display_name: string | null
           email: string | null
           id: string
+          public_name: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -94,6 +293,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id: string
+          public_name?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -101,6 +301,7 @@ export type Database = {
           display_name?: string | null
           email?: string | null
           id?: string
+          public_name?: string | null
         }
         Relationships: []
       }
@@ -392,9 +593,57 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      community_loadout_scores: {
+        Row: {
+          loadout_id: string | null
+          score: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "community_loadout_votes_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "community_loadouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_loadout_votes_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "public_loadouts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      public_editors: {
+        Row: {
+          id: string | null
+          public_name: string | null
+          role: Database["public"]["Enums"]["app_role"] | null
+        }
+        Relationships: []
+      }
+      public_loadouts: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          display_name: string | null
+          id: string | null
+          title: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
+      admin_list_profiles: {
+        Args: never
+        Returns: {
+          display_name: string
+          email: string
+          id: string
+          public_name: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -403,6 +652,7 @@ export type Database = {
         Returns: boolean
       }
       is_editor: { Args: { _user_id: string }; Returns: boolean }
+      is_staff: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "editor" | "viewer"
