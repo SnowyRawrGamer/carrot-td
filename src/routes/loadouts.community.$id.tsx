@@ -90,7 +90,6 @@ function CommunityLoadoutDetail() {
 
   if (!data) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
   const { loadout, score, myVote } = data;
-  const displayName = loadout.show_real_name ? (loadout.profiles?.display_name || loadout.profiles?.email || "Unknown") : loadout.custom_display_name || "Anonymous";
   const resolvedList = Object.values(resolvedMap);
   const totals = computeLoadoutTotals(resolvedList);
 
