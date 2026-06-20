@@ -10,7 +10,7 @@ export interface ResolvedUnit {
   rarity: string | null;
   stats: StatsMap;
   missingPlacement: boolean;
-  placementValue: number;
+  placementValue: number; // max placement allowed (or 1 if missing)
 }
 
 export async function fetchUnitWithUpgrades(unitId: string) {
@@ -32,7 +32,7 @@ function getPlacement(stats: StatsMap): { value: number; missing: boolean } {
   const raw = stats["Placement"] ?? stats["Placement Limit"];
   if (raw === undefined || raw === null) return { value: 1, missing: true };
   const num = Number(raw);
-  return { value: Number.isFinite(num) ? num : 1, missing: !Number.isFinite(num) };
+  return { value: Number.isFinite(num) && num > 0 ? num : 1, missing: !Number.isFinite(num) };
 }
 
 export function resolveUnitStats(
@@ -69,28 +69,43 @@ export function resolveUnitStats(
   };
 }
 
+/** Returns all level rows for a given path, with stats merged cumulatively (base -> level 1 -> level 2 -> ...). */
+export function levelBreakdown(unit: any, paths: any[], levels: any[], pathIndex: number) {
+  const path = paths.find((p) => p.path_index === pathIndex);
+  if (!path) return [];
+  const pathLevels = levels.filter((l) => l.path_id === path.id).sort((a, b) => a.level - b.level);
+  let running: StatsMap = { ...(unit.base_stats || {}) };
+  const rows: { level: number; stats: StatsMap }[] = [{ level: 0, stats: { ...running } }];
+  for (const lvl of pathLevels) {
+    running = { ...running, ...(lvl.stats || {}) };
+    rows.push({ level: lvl.level, stats: { ...running } });
+  }
+  return rows;
+}
+
+export interface SlotForTotals {
+  resolved: ResolvedUnit;
+  placementCount: number; // user-chosen count, 1 to resolved.placementValue
+}
+
 export interface LoadoutTotals {
   totalDamage: number;
   totalCost: number;
   missingPlacementUnits: string[];
-  perUnitDamage: Record<string, number>;
 }
 
-export function computeLoadoutTotals(resolved: ResolvedUnit[]): LoadoutTotals {
+export function computeLoadoutTotals(slots: SlotForTotals[]): LoadoutTotals {
   let totalDamage = 0;
   let totalCost = 0;
   const missingPlacementUnits: string[] = [];
-  const perUnitDamage: Record<string, number> = {};
 
-  for (const u of resolved) {
+  for (const { resolved: u, placementCount } of slots) {
     const damage = Number(u.stats["damage"] ?? 0) || 0;
     const cost = Number(u.stats["cost"] ?? 0) || 0;
-    const effectiveDamage = damage * u.placementValue;
-    perUnitDamage[u.id] = effectiveDamage;
-    totalDamage += effectiveDamage;
+    totalDamage += damage * placementCount;
     totalCost += cost;
     if (u.missingPlacement) missingPlacementUnits.push(u.name);
   }
 
-  return { totalDamage, totalCost, missingPlacementUnits, perUnitDamage };
+  return { totalDamage, totalCost, missingPlacementUnits };
 }
