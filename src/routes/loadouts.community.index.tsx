@@ -23,9 +23,9 @@ function CommunityLoadouts() {
     queryKey: ["community-loadouts"],
     queryFn: async () => {
       const { data: rows, error } = await supabase
-  .from("public_loadouts")
-  .select("id, title, description, created_at, display_name")
-  .order("created_at", { ascending: false });
+        .from("public_loadouts")
+        .select("id, title, description, created_at, display_name")
+        .order("created_at", { ascending: false });
       if (error) throw error;
 
       const ids = (rows || []).map((r) => r.id);
@@ -55,7 +55,7 @@ function CommunityLoadouts() {
         score: scoreMap[r.id] || 0,
         units: unitsMap[r.id] || [],
         myVote: myVotes[r.id] || 0,
-        }));
+      }));
     },
   });
 
@@ -111,7 +111,7 @@ function CommunityLoadouts() {
 
               <Link to="/loadouts/community/$id" params={{ id: l.id }} className="flex-1 min-w-0">
                 <div className="font-semibold">{l.title}</div>
-                <div className="text-xs text-muted-foreground mb-2">by {l.displayName}</div>
+                <div className="text-xs text-muted-foreground mb-2">by {l.display_name}</div>
                 <div className="flex gap-1">
                   {l.units.map((u: any, i: number) => (
                     <div key={i} className="h-10 w-10 rounded-md bg-muted overflow-hidden">
