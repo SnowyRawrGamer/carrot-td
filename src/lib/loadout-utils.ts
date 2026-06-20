@@ -8,10 +8,10 @@ export interface ResolvedUnit {
   slug: string;
   photo_url: string | null;
   rarity: string | null;
-  stats: StatsMap; // gameplay stats (damage, range, cooldown, etc) — "cost" here is always placement cost
-  placementCost: number; // cost to place the unit (never changes with upgrades)
-  upgradeCost: number; // cumulative cost spent on upgrades to reach the selected level
-  totalCost: number; // placementCost + upgradeCost
+  stats: StatsMap; // gameplay stats — "cost" here is always placement cost
+  placementCost: number;
+  upgradeCost: number; // cumulative upgrade cost to reach selected level, from the dedicated cost column
+  totalCost: number;
   missingPlacement: boolean;
   placementValue: number;
 }
@@ -55,14 +55,14 @@ export function resolveUnitStats(
         .filter((l) => l.path_id === path.id && l.level <= selection.level)
         .sort((a, b) => a.level - b.level);
       for (const lvl of pathLevels) {
-        const { cost: levelUpgradeCost, ...rest } = lvl.stats || {};
-        stats = { ...stats, ...rest }; // merge everything EXCEPT cost (cost is an upgrade price, not a stat override)
-        upgradeCost += Number(levelUpgradeCost ?? 0) || 0;
+        const { cost: _ignoredStatsCost, ...rest } = lvl.stats || {}; // ignore any leftover "cost" inside stats JSON
+        stats = { ...stats, ...rest };
+        upgradeCost += Number(lvl.cost ?? 0) || 0; // real upgrade price lives in the dedicated column
       }
     }
   }
 
-  stats["cost"] = placementCost; // always the real placement cost, never overridden by a level's upgrade price
+  stats["cost"] = placementCost;
 
   const { value, missing } = getPlacement(stats);
 
@@ -81,7 +81,7 @@ export function resolveUnitStats(
   };
 }
 
-/** Returns all level rows for a path. "cost" shown per row is that level's upgrade price (not merged), every other stat is cumulative. */
+/** All level rows for a path. "cost" per row = that level's upgrade price (dedicated column), every other stat is cumulative. */
 export function levelBreakdown(unit: any, paths: any[], levels: any[], pathIndex: number) {
   const path = paths.find((p) => p.path_index === pathIndex);
   if (!path) return [];
@@ -90,9 +90,9 @@ export function levelBreakdown(unit: any, paths: any[], levels: any[], pathIndex
   const baseCost = Number(unit.base_stats?.["cost"] ?? 0) || 0;
   const rows: { level: number; stats: StatsMap; upgradeCost: number }[] = [{ level: 0, stats: { ...running, cost: baseCost }, upgradeCost: 0 }];
   for (const lvl of pathLevels) {
-    const { cost: levelUpgradeCost, ...rest } = lvl.stats || {};
+    const { cost: _ignoredStatsCost, ...rest } = lvl.stats || {};
     running = { ...running, ...rest };
-    rows.push({ level: lvl.level, stats: { ...running, cost: baseCost }, upgradeCost: Number(levelUpgradeCost ?? 0) || 0 });
+    rows.push({ level: lvl.level, stats: { ...running, cost: baseCost }, upgradeCost: Number(lvl.cost ?? 0) || 0 });
   }
   return rows;
 }
