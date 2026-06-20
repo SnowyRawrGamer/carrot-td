@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { Carrot, Plus, X, AlertTriangle, Users, Trash2, Pencil, ChevronDown, ChevronUp as ChevronUpIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
@@ -60,9 +60,8 @@ function LoadoutsBuilder() {
     },
   });
 
-  // Restore draft from localStorage (survives sign-in redirect)
   useEffect(() => {
-    if (editingId) return; // don't clobber an edit-in-progress
+    if (editingId) return;
     try {
       const raw = localStorage.getItem(DRAFT_KEY);
       if (raw) {
@@ -87,7 +86,6 @@ function LoadoutsBuilder() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist draft on every change (only while not actively editing an existing submission)
   useEffect(() => {
     if (editingId) return;
     const draft = {
@@ -147,7 +145,6 @@ function LoadoutsBuilder() {
   const resolvedSlots = slots.filter((s) => s.resolved) as (Slot & { resolved: ResolvedUnit })[];
   const totals = computeLoadoutTotals(resolvedSlots.map((s) => ({ resolved: s.resolved, placementCount: s.placementCount })));
 
-  // ---- Submitted loadouts (mine) ----
   const { data: mine } = useQuery({
     queryKey: ["my-loadouts", user?.id],
     enabled: !!user,
@@ -364,7 +361,9 @@ function LoadoutsBuilder() {
                 {slot.resolved && (
                   <div className="flex gap-3 text-xs text-muted-foreground ml-auto">
                     <span>DMG {String(slot.resolved.stats["damage"] ?? "—")}</span>
-                    <span>Cost {String(slot.resolved.stats["cost"] ?? "—")}</span>
+                    <span>Placement Cost {slot.resolved.placementCost}</span>
+                    <span>Upgrade Cost {slot.resolved.upgradeCost}</span>
+                    <span>Total Cost {slot.resolved.totalCost}</span>
                   </div>
                 )}
 
@@ -380,6 +379,8 @@ function LoadoutsBuilder() {
                       <tr className="border-b text-left text-muted-foreground">
                         <th className="py-1 pr-3">Level</th>
                         {allKeys.map((k) => <th key={k} className="py-1 pr-3 capitalize">{k}</th>)}
+                        <th className="py-1 pr-3">Upgrade Cost</th>
+                        <th className="py-1 pr-3">Total Cost</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -387,6 +388,8 @@ function LoadoutsBuilder() {
                         <tr key={r.level} className={`border-b last:border-0 ${r.level === slot.level ? "bg-primary/5 font-medium" : ""}`}>
                           <td className="py-1 pr-3">{r.level}</td>
                           {allKeys.map((k) => <td key={k} className="py-1 pr-3">{r.stats[k] != null ? String(r.stats[k]) : "—"}</td>)}
+                          <td className="py-1 pr-3">{r.level === 0 ? "—" : r.upgradeCost}</td>
+                          <td className="py-1 pr-3">{r.cumulativeCost}</td>
                         </tr>
                       ))}
                     </tbody>
