@@ -13,9 +13,12 @@ type RoleKind = "owner" | "editor" | "viewer";
 export function EditorsManager() {
   const qc = useQueryClient();
   const [edits, setEdits] = useState<Record<string, string>>({});
-const { data: profiles, error } = await supabase.rpc("admin_list_profiles");
-if (error) throw error;
-profiles?.sort((a: any, b: any) => (a.email || "").localeCompare(b.email || ""));
+  const { data: rows } = useQuery({
+    queryKey: ["all-users-roles"],
+    queryFn: async () => {
+      const { data: profiles, error } = await supabase.rpc("admin_list_profiles");
+      if (error) throw error;
+      profiles?.sort((a: any, b: any) => (a.email || "").localeCompare(b.email || ""));
       const ids = (profiles || []).map((p) => p.id);
       const { data: roles } = ids.length
         ? await supabase.from("user_roles").select("id, user_id, role").in("user_id", ids)
