@@ -55,8 +55,7 @@ function CommunityLoadouts() {
         score: scoreMap[r.id] || 0,
         units: unitsMap[r.id] || [],
         myVote: myVotes[r.id] || 0,
-        displayName: r.show_real_name ? (r.profiles?.display_name || r.profiles?.email || "Unknown") : r.custom_display_name || "Anonymous",
-      }));
+        }));
     },
   });
 
