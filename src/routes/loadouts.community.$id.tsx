@@ -32,11 +32,11 @@ function CommunityLoadoutDetail() {
         .single();
       if (error) throw error;
 
-      const { data: links } = await supabase
-        .from("community_loadout_units")
-        .select("unit_id, path_index, level, slot_index")
-        .eq("loadout_id", id)
-        .order("slot_index");
+      const { data: loadout, error } = await supabase
+  .from("public_loadouts")
+  .select("id, title, description, display_name")
+  .eq("id", id)
+  .single();
 
       const { data: score } = await supabase.from("community_loadout_scores").select("score").eq("loadout_id", id).maybeSingle();
 
