@@ -28,7 +28,7 @@ function CommunityLoadouts() {
         .order("created_at", { ascending: false });
       if (error) throw error;
 
-      const ids = (rows || []).map((r) => r.id);
+      const ids = (rows || []).map((r) => r.id).filter((x): x is string => !!x);
       const { data: scores } = ids.length
         ? await supabase.from("community_loadout_scores").select("*").in("loadout_id", ids)
         : { data: [] as any[] };

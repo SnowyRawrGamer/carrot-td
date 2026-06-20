@@ -199,7 +199,7 @@ function LoadoutsBuilder() {
     const rows = slots.filter((s) => s.unitId).map((s, i) => ({
       loadout_id: loadoutId, unit_id: s.unitId, path_index: s.pathIndex, level: s.level, placement_count: s.placementCount, slot_index: i,
     }));
-    if (rows.length) await supabase.from("community_loadout_units").insert(rows);
+    if (rows.length) await supabase.from("community_loadout_units").insert(rows as any);
   }
 
   const submit = useMutation({

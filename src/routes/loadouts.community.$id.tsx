@@ -91,7 +91,7 @@ function CommunityLoadoutDetail() {
   if (!data) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
   const { loadout, score, myVote } = data;
   const resolvedList = Object.values(resolvedMap);
-  const totals = computeLoadoutTotals(resolvedList);
+  const totals = computeLoadoutTotals(resolvedList as any);
 
   return (
     <Page>
