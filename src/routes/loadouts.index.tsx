@@ -245,3 +245,269 @@ function LoadoutsBuilder() {
       await saveUnits(loadout.id);
       return { done: true };
     },
+    onSuccess: (result: any) => {
+      if (result?.needsConfirm) {
+        setReapproveWarnOpen(true);
+        return;
+      }
+      toast.success(editingId ? "Saved!" : "Submitted! An editor will review it before it appears publicly.");
+      setSubmitOpen(false);
+      setReapproveWarnOpen(false);
+      qc.invalidateQueries({ queryKey: ["my-loadouts"] });
+      if (!editingId) {
+        localStorage.removeItem(DRAFT_KEY);
+      }
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <Page>
+      <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
+        <div>
+          <h1 className="text-3xl font-bold">Loadouts</h1>
+          <p className="text-muted-foreground text-sm mt-1">Build a 1-5 unit loadout and see its combined stats.</p>
+        </div>
+        <div className="flex gap-2">
+          <Button variant="outline" onClick={() => setClearConfirmOpen(true)}>Clear Loadout</Button>
+          <Button asChild variant="outline">
+            <Link to="/loadouts/community"><Users className="h-4 w-4 mr-1" /> Community Loadouts</Link>
+          </Button>
+        </div>
+      </div>
+
+      {editingId && (
+        <Card className="p-3 mb-4 bg-primary/5 border-primary/30 text-sm flex items-center justify-between">
+          <span>Editing an existing submission.</span>
+          <Button size="sm" variant="ghost" onClick={() => { setEditingId(null); clearLoadout(); }}>Cancel edit</Button>
+        </Card>
+      )}
+
+      <div className="space-y-4 mb-6">
+        {slots.map((slot, idx) => {
+          const maxPlacement = slot.resolved?.placementValue ?? 1;
+          const levelRows = slot.unitRaw && slot.pathIndex !== null ? levelBreakdown(slot.unitRaw, slot.paths, slot.levels, slot.pathIndex) : [];
+          const allKeys = Array.from(new Set(levelRows.flatMap((r) => Object.keys(r.stats))));
+          return (
+            <Card key={idx} className="p-4">
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="h-14 w-14 rounded-md bg-muted overflow-hidden shrink-0">
+                  {slot.resolved?.photo_url ? (
+                    <img src={slot.resolved.photo_url} alt="" className="h-full w-full object-contain" />
+                  ) : (
+                    <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-6 w-6" /></div>
+                  )}
+                </div>
+
+                <Select value={slot.unitId || ""} onValueChange={(v) => pickUnit(idx, v)}>
+                  <SelectTrigger className="w-52"><SelectValue placeholder="Choose a unit" /></SelectTrigger>
+                  <SelectContent>
+                    {(unitsList || []).map((u) => (
+                      <SelectItem key={u.id} value={u.id}>
+                        <span className="flex items-center gap-2">
+                          <span className="h-5 w-5 rounded bg-muted overflow-hidden inline-block shrink-0">
+                            {u.photo_url && <img src={u.photo_url} alt="" className="h-full w-full object-contain" />}
+                          </span>
+                          {u.name}
+                        </span>
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+
+                {slot.unitRaw && slot.paths.length > 0 && (
+                  <Select
+                    value={slot.pathIndex === null ? "base" : String(slot.pathIndex)}
+                    onValueChange={(v) => updatePathLevel(idx, v === "base" ? null : Number(v), v === "base" ? 0 : 1)}
+                  >
+                    <SelectTrigger className="w-40"><SelectValue placeholder="Path" /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="base">Base (no path)</SelectItem>
+                      {slot.paths.map((p) => (
+                        <SelectItem key={p.id} value={String(p.path_index)}>Path {p.path_index}{p.label ? ` — ${p.label}` : ""}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {slot.unitRaw && slot.pathIndex !== null && (
+                  <Select value={String(slot.level)} onValueChange={(v) => updatePathLevel(idx, slot.pathIndex, Number(v))}>
+                    <SelectTrigger className="w-28"><SelectValue placeholder="Level" /></SelectTrigger>
+                    <SelectContent>
+                      {Array.from(
+                        { length: Math.max(1, slot.levels.filter((l) => l.path_id === slot.paths.find((p) => p.path_index === slot.pathIndex)?.id).length) },
+                        (_, i) => i + 1
+                      ).map((lvl) => (
+                        <SelectItem key={lvl} value={String(lvl)}>Level {lvl}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {slot.unitRaw && (
+                  <Select value={String(slot.placementCount)} onValueChange={(v) => updatePlacementCount(idx, Number(v))}>
+                    <SelectTrigger className="w-32"><SelectValue placeholder="Placed" /></SelectTrigger>
+                    <SelectContent>
+                      {Array.from({ length: maxPlacement }, (_, i) => i + 1).map((n) => (
+                        <SelectItem key={n} value={String(n)}>{n} placed</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+
+                {slot.unitRaw && slot.paths.length > 0 && (
+                  <Button size="sm" variant="ghost" onClick={() => toggleLevels(idx)}>
+                    {slot.showLevels ? <ChevronUpIcon className="h-4 w-4 mr-1" /> : <ChevronDown className="h-4 w-4 mr-1" />} Levels
+                  </Button>
+                )}
+
+                {slot.resolved && (
+                  <div className="flex gap-3 text-xs text-muted-foreground ml-auto">
+                    <span>DMG {String(slot.resolved.stats["damage"] ?? "—")}</span>
+                    <span>Cost {String(slot.resolved.stats["cost"] ?? "—")}</span>
+                  </div>
+                )}
+
+                {slots.length > 1 && (
+                  <Button size="icon" variant="ghost" onClick={() => removeSlot(idx)}><X className="h-4 w-4" /></Button>
+                )}
+              </div>
+
+              {slot.showLevels && levelRows.length > 0 && (
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-xs">
+                    <thead>
+                      <tr className="border-b text-left text-muted-foreground">
+                        <th className="py-1 pr-3">Level</th>
+                        {allKeys.map((k) => <th key={k} className="py-1 pr-3 capitalize">{k}</th>)}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {levelRows.map((r) => (
+                        <tr key={r.level} className={`border-b last:border-0 ${r.level === slot.level ? "bg-primary/5 font-medium" : ""}`}>
+                          <td className="py-1 pr-3">{r.level}</td>
+                          {allKeys.map((k) => <td key={k} className="py-1 pr-3">{r.stats[k] != null ? String(r.stats[k]) : "—"}</td>)}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </Card>
+          );
+        })}
+
+        {slots.length < 5 && (
+          <Button variant="outline" onClick={addSlot}><Plus className="h-4 w-4 mr-1" /> Add unit ({slots.length}/5)</Button>
+        )}
+      </div>
+
+      {totals.missingPlacementUnits.length > 0 && (
+        <Card className="p-4 mb-6 border-destructive/40 bg-destructive/5 flex items-start gap-2">
+          <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+          <p className="text-sm text-destructive">
+            Error: {totals.missingPlacementUnits.join(", ")} {totals.missingPlacementUnits.length > 1 ? "are" : "is"} missing placement stats. Assumed placement of 1 for damage calculation.
+          </p>
+        </Card>
+      )}
+
+      <Card className="p-5 mb-6">
+        <h2 className="font-semibold mb-2">Loadout totals</h2>
+        <div className="flex gap-6 text-sm">
+          <div><span className="text-muted-foreground">Total damage (×placement):</span> <span className="font-semibold">{totals.totalDamage}</span></div>
+          <div><span className="text-muted-foreground">Total cost:</span> <span className="font-semibold">{totals.totalCost}</span></div>
+        </div>
+      </Card>
+
+      <Button onClick={() => (user ? setSubmitOpen(true) : toast.error("Sign in to submit a loadout to the community."))}>
+        {editingId ? "Save Changes" : "Submit to Community Loadouts"}
+      </Button>
+
+      {user && (
+        <div className="mt-10">
+          <h2 className="text-xl font-bold mb-3">Submitted Loadouts</h2>
+          <Tabs defaultValue="review">
+            <TabsList>
+              <TabsTrigger value="review">Under Review ({pendingMine.length}/5)</TabsTrigger>
+              <TabsTrigger value="approved">Approved ({approvedMine.length})</TabsTrigger>
+            </TabsList>
+            <TabsContent value="review" className="mt-3 space-y-2">
+              {pendingMine.length === 0 ? <p className="text-sm text-muted-foreground">Nothing under review.</p> : pendingMine.map((l) => (
+                <Card key={l.id} className="p-3 flex items-center gap-3">
+                  <div className="flex-1 min-w-0 font-medium truncate">{l.title}</div>
+                  <Button size="sm" variant="outline" onClick={() => loadForEdit(l.id)}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
+                  <Button size="sm" variant="destructive" onClick={() => deleteMine.mutate(l.id)}><Trash2 className="h-4 w-4 mr-1" /> Delete</Button>
+                </Card>
+              ))}
+            </TabsContent>
+            <TabsContent value="approved" className="mt-3 space-y-2">
+              {approvedMine.length === 0 ? <p className="text-sm text-muted-foreground">No approved loadouts yet.</p> : approvedMine.map((l) => (
+                <Card key={l.id} className="p-3 flex items-center gap-3">
+                  <Link to="/loadouts/community/$id" params={{ id: l.id }} className="flex-1 min-w-0 font-medium truncate hover:underline">{l.title}</Link>
+                  <Button size="sm" variant="outline" onClick={() => loadForEdit(l.id)}><Pencil className="h-4 w-4 mr-1" /> Edit</Button>
+                </Card>
+              ))}
+            </TabsContent>
+          </Tabs>
+        </div>
+      )}
+
+      <Dialog open={submitOpen} onOpenChange={setSubmitOpen}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>{editingId ? "Save Loadout" : "Submit Loadout"}</DialogTitle></DialogHeader>
+          <div className="space-y-3">
+            <div>
+              <Label>Title</Label>
+              <Input value={title} onChange={(e) => setTitle(e.target.value)} placeholder="My favorite loadout" />
+            </div>
+            <div>
+              <Label>Description</Label>
+              <Textarea value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Why this loadout works..." />
+            </div>
+            <div className="flex items-center gap-2">
+              <Switch checked={showRealName} onCheckedChange={setShowRealName} />
+              <Label>Show my real account name</Label>
+            </div>
+            {!showRealName && (
+              <div>
+                <Label>Custom display name</Label>
+                <Input value={customName} onChange={(e) => setCustomName(e.target.value)} placeholder="e.g. CarrotKing99" />
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button onClick={() => submit.mutate(false)} disabled={submit.isPending}>{editingId ? "Save" : "Submit for review"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AlertDialog open={reapproveWarnOpen} onOpenChange={setReapproveWarnOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>This will need re-approval</AlertDialogTitle>
+            <AlertDialogDescription>
+              You changed the title or description of an approved loadout. It will be removed from the Community Loadouts page and sent back for editor review. Its votes will be kept. Continue?
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={() => submit.mutate(true)}>Yes, resubmit for review</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={clearConfirmOpen} onOpenChange={setClearConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Clear this loadout?</AlertDialogTitle>
+            <AlertDialogDescription>This wipes everything you've built here. It won't affect anything already submitted.</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={clearLoadout}>Clear it</AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Page>
+  );
+}
