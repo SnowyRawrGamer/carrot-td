@@ -1,21 +1,3 @@
-<thead>
-  <tr className="border-b text-left text-muted-foreground">
-    <th className="py-1 pr-3">Level</th>
-    {allKeys.map((k) => <th key={k} className="py-1 pr-3 capitalize">{k}</th>)}
-    <th className="py-1 pr-3">Upgrade Cost</th>
-    <th className="py-1 pr-3">Total Cost</th>
-  </tr>
-</thead>
-<tbody>
-  {levelRows.map((r) => (
-    <tr key={r.level} className={`border-b last:border-0 ${r.level === slot.level ? "bg-primary/5 font-medium" : ""}`}>
-      <td className="py-1 pr-3">{r.level}</td>
-      {allKeys.map((k) => <td key={k} className="py-1 pr-3">{r.stats[k] != null ? String(r.stats[k]) : "—"}</td>)}
-      <td className="py-1 pr-3">{r.level === 0 ? "—" : r.upgradeCost}</td>
-      <td className="py-1 pr-3">{r.cumulativeCost}</td>
-    </tr>
-  ))}
-</tbody>
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect, useMemo } from "react";
@@ -217,7 +199,7 @@ function LoadoutsBuilder() {
     const rows = slots.filter((s) => s.unitId).map((s, i) => ({
       loadout_id: loadoutId, unit_id: s.unitId, path_index: s.pathIndex, level: s.level, placement_count: s.placementCount, slot_index: i,
     }));
-    if (rows.length) await supabase.from("community_loadout_units").insert(rows);
+    if (rows.length) await supabase.from("community_loadout_units").insert(rows as any);
   }
 
   const submit = useMutation({

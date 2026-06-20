@@ -15,12 +15,16 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpdatesIndexRouteImport } from './routes/updates.index'
 import { Route as UnitsIndexRouteImport } from './routes/units.index'
 import { Route as SummonsIndexRouteImport } from './routes/summons.index'
+import { Route as LoadoutsIndexRouteImport } from './routes/loadouts.index'
+import { Route as EditorsIndexRouteImport } from './routes/editors.index'
 import { Route as ChestsIndexRouteImport } from './routes/chests.index'
 import { Route as UpdatesSlugRouteImport } from './routes/updates.$slug'
 import { Route as UnitsSlugRouteImport } from './routes/units.$slug'
 import { Route as SummonsSlugRouteImport } from './routes/summons.$slug'
 import { Route as ChestsSlugRouteImport } from './routes/chests.$slug'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
+import { Route as LoadoutsCommunityIndexRouteImport } from './routes/loadouts.community.index'
+import { Route as LoadoutsCommunityIdRouteImport } from './routes/loadouts.community.$id'
 
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
@@ -49,6 +53,16 @@ const UnitsIndexRoute = UnitsIndexRouteImport.update({
 const SummonsIndexRoute = SummonsIndexRouteImport.update({
   id: '/summons/',
   path: '/summons/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoadoutsIndexRoute = LoadoutsIndexRouteImport.update({
+  id: '/loadouts/',
+  path: '/loadouts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const EditorsIndexRoute = EditorsIndexRouteImport.update({
+  id: '/editors/',
+  path: '/editors/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ChestsIndexRoute = ChestsIndexRouteImport.update({
@@ -81,6 +95,16 @@ const AuthenticatedAdminRoute = AuthenticatedAdminRouteImport.update({
   path: '/admin',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const LoadoutsCommunityIndexRoute = LoadoutsCommunityIndexRouteImport.update({
+  id: '/loadouts/community/',
+  path: '/loadouts/community/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const LoadoutsCommunityIdRoute = LoadoutsCommunityIdRouteImport.update({
+  id: '/loadouts/community/$id',
+  path: '/loadouts/community/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -91,9 +115,13 @@ export interface FileRoutesByFullPath {
   '/units/$slug': typeof UnitsSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests/': typeof ChestsIndexRoute
+  '/editors/': typeof EditorsIndexRoute
+  '/loadouts/': typeof LoadoutsIndexRoute
   '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
   '/updates/': typeof UpdatesIndexRoute
+  '/loadouts/community/$id': typeof LoadoutsCommunityIdRoute
+  '/loadouts/community/': typeof LoadoutsCommunityIndexRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -104,9 +132,13 @@ export interface FileRoutesByTo {
   '/units/$slug': typeof UnitsSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests': typeof ChestsIndexRoute
+  '/editors': typeof EditorsIndexRoute
+  '/loadouts': typeof LoadoutsIndexRoute
   '/summons': typeof SummonsIndexRoute
   '/units': typeof UnitsIndexRoute
   '/updates': typeof UpdatesIndexRoute
+  '/loadouts/community/$id': typeof LoadoutsCommunityIdRoute
+  '/loadouts/community': typeof LoadoutsCommunityIndexRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -119,9 +151,13 @@ export interface FileRoutesById {
   '/units/$slug': typeof UnitsSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests/': typeof ChestsIndexRoute
+  '/editors/': typeof EditorsIndexRoute
+  '/loadouts/': typeof LoadoutsIndexRoute
   '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
   '/updates/': typeof UpdatesIndexRoute
+  '/loadouts/community/$id': typeof LoadoutsCommunityIdRoute
+  '/loadouts/community/': typeof LoadoutsCommunityIndexRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -134,9 +170,13 @@ export interface FileRouteTypes {
     | '/units/$slug'
     | '/updates/$slug'
     | '/chests/'
+    | '/editors/'
+    | '/loadouts/'
     | '/summons/'
     | '/units/'
     | '/updates/'
+    | '/loadouts/community/$id'
+    | '/loadouts/community/'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -147,9 +187,13 @@ export interface FileRouteTypes {
     | '/units/$slug'
     | '/updates/$slug'
     | '/chests'
+    | '/editors'
+    | '/loadouts'
     | '/summons'
     | '/units'
     | '/updates'
+    | '/loadouts/community/$id'
+    | '/loadouts/community'
   id:
     | '__root__'
     | '/'
@@ -161,9 +205,13 @@ export interface FileRouteTypes {
     | '/units/$slug'
     | '/updates/$slug'
     | '/chests/'
+    | '/editors/'
+    | '/loadouts/'
     | '/summons/'
     | '/units/'
     | '/updates/'
+    | '/loadouts/community/$id'
+    | '/loadouts/community/'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -175,9 +223,13 @@ export interface RootRouteChildren {
   UnitsSlugRoute: typeof UnitsSlugRoute
   UpdatesSlugRoute: typeof UpdatesSlugRoute
   ChestsIndexRoute: typeof ChestsIndexRoute
+  EditorsIndexRoute: typeof EditorsIndexRoute
+  LoadoutsIndexRoute: typeof LoadoutsIndexRoute
   SummonsIndexRoute: typeof SummonsIndexRoute
   UnitsIndexRoute: typeof UnitsIndexRoute
   UpdatesIndexRoute: typeof UpdatesIndexRoute
+  LoadoutsCommunityIdRoute: typeof LoadoutsCommunityIdRoute
+  LoadoutsCommunityIndexRoute: typeof LoadoutsCommunityIndexRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -224,6 +276,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SummonsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/loadouts/': {
+      id: '/loadouts/'
+      path: '/loadouts'
+      fullPath: '/loadouts/'
+      preLoaderRoute: typeof LoadoutsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/editors/': {
+      id: '/editors/'
+      path: '/editors'
+      fullPath: '/editors/'
+      preLoaderRoute: typeof EditorsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chests/': {
       id: '/chests/'
       path: '/chests'
@@ -266,6 +332,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedAdminRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/loadouts/community/': {
+      id: '/loadouts/community/'
+      path: '/loadouts/community'
+      fullPath: '/loadouts/community/'
+      preLoaderRoute: typeof LoadoutsCommunityIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/loadouts/community/$id': {
+      id: '/loadouts/community/$id'
+      path: '/loadouts/community/$id'
+      fullPath: '/loadouts/community/$id'
+      preLoaderRoute: typeof LoadoutsCommunityIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -289,9 +369,13 @@ const rootRouteChildren: RootRouteChildren = {
   UnitsSlugRoute: UnitsSlugRoute,
   UpdatesSlugRoute: UpdatesSlugRoute,
   ChestsIndexRoute: ChestsIndexRoute,
+  EditorsIndexRoute: EditorsIndexRoute,
+  LoadoutsIndexRoute: LoadoutsIndexRoute,
   SummonsIndexRoute: SummonsIndexRoute,
   UnitsIndexRoute: UnitsIndexRoute,
   UpdatesIndexRoute: UpdatesIndexRoute,
+  LoadoutsCommunityIdRoute: LoadoutsCommunityIdRoute,
+  LoadoutsCommunityIndexRoute: LoadoutsCommunityIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
