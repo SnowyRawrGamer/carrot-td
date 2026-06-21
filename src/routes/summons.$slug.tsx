@@ -22,6 +22,10 @@ function weightedRoll(entries: any[]) {
   return entries[entries.length - 1]?.unit;
 }
 
+function fmtDate(d?: string | null) {
+  return d ? new Date(d + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : null;
+}
+
 function SummonDetail() {
   const { slug } = Route.useParams();
   const [results, setResults] = useState<any[] | null>(null);
@@ -36,16 +40,34 @@ function SummonDetail() {
         .from("summon_entries")
         .select("drop_rate, unit:units(id, slug, name, photo_url, rarity, tier)")
         .eq("summon_id", summon.id);
-      return { summon, entries: (entries || []) as any[] };
+
+      const { data: updateLinks } = await supabase
+        .from("update_summons")
+        .select("update:updates(id, slug, name, released_at)")
+        .eq("summon_id", summon.id);
+      const addedIn = (updateLinks || [])
+        .map((r: any) => r.update)
+        .filter(Boolean)
+        .sort((a: any, b: any) => (a.released_at || "").localeCompare(b.released_at || ""))[0] || null;
+
+      let removedIn = null;
+      if (summon.removed_update_id) {
+        const { data: ru } = await supabase.from("updates").select("id, slug, name, released_at").eq("id", summon.removed_update_id).maybeSingle();
+        removedIn = ru;
+      }
+
+      return { summon, entries: (entries || []) as any[], addedIn, removedIn };
     },
   });
 
   if (isLoading) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
   if (!data) return <Page><Card className="p-8 text-center">Summon not found.</Card></Page>;
-  const { summon, entries } = data;
+  const { summon, entries, addedIn, removedIn } = data;
   const total = entries.reduce((s, e) => s + Number(e.drop_rate || 0), 0);
   const sorted = [...entries].sort((a, b) => Number(b.drop_rate) - Number(a.drop_rate));
   const canSimulate = entries.length > 0;
+  const addedDate = fmtDate(addedIn?.released_at);
+  const removedDate = fmtDate(removedIn?.released_at);
 
   function rollOne() { setResults([weightedRoll(entries)]); }
   function rollTen() { setResults(Array.from({ length: 10 }, () => weightedRoll(entries))); }
@@ -55,13 +77,44 @@ function SummonDetail() {
       <Link to="/summons" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
         <ArrowLeft className="h-4 w-4 mr-1" /> All summons
       </Link>
+
+      {(addedIn || removedIn) && (
+        <Card className="p-3 mb-4 bg-primary/5 border-primary/30 text-sm space-y-1">
+          {addedIn && (
+            <p>
+              Added in{" "}
+              <Link to="/updates/$slug" params={{ slug: addedIn.slug }} className="font-semibold text-primary hover:underline">{addedIn.name}</Link>
+              {addedDate ? ` (${addedDate})` : ""}
+              {removedIn && " and"}
+              {removedIn && (
+                <>
+                  {" "}removed in{" "}
+                  <Link to="/updates/$slug" params={{ slug: removedIn.slug }} className="font-semibold text-primary hover:underline">{removedIn.name}</Link>
+                  {removedDate ? ` (${removedDate})` : ""}
+                </>
+              )}.
+            </p>
+          )}
+          {!addedIn && removedIn && (
+            <p>
+              Removed in{" "}
+              <Link to="/updates/$slug" params={{ slug: removedIn.slug }} className="font-semibold text-primary hover:underline">{removedIn.name}</Link>
+              {removedDate ? ` (${removedDate})` : ""}.
+            </p>
+          )}
+        </Card>
+      )}
+
       <Card className="overflow-hidden p-0 mb-6">
         <div className="aspect-[21/9] bg-muted">
           {summon.banner_url ? <img src={summon.banner_url} alt={summon.name} className="h-full w-full object-contain" /> :
             <div className="h-full w-full grid place-items-center text-muted-foreground"><Sparkles className="h-12 w-12" /></div>}
         </div>
         <div className="p-5">
-          <h1 className="text-2xl font-bold">{summon.name}</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{summon.name}</h1>
+            {removedIn && <span className="text-xs px-2 py-0.5 rounded border bg-destructive/10 text-destructive border-destructive/30">Removed</span>}
+          </div>
           {summon.description && <p className="text-muted-foreground mt-1">{summon.description}</p>}
         </div>
       </Card>
