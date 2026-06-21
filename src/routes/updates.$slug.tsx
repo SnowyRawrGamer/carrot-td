@@ -24,21 +24,33 @@ function UpdateDetail() {
       const { data: update, error } = await supabase.from("updates").select("*").eq("slug", slug).maybeSingle();
       if (error) throw error;
       if (!update) return null;
-      const [{ data: units }, { data: chests }] = await Promise.all([
+      const [{ data: units }, { data: chests }, { data: summons }] = await Promise.all([
         supabase.from("update_units").select("unit:units(id, slug, name, photo_url, rarity, tier)").eq("update_id", update.id),
         supabase.from("update_chests").select("chest:chests(id, slug, name, image_url)").eq("update_id", update.id),
+        supabase.from("update_summons").select("summon:summons(id, slug, name, banner_url)").eq("update_id", update.id),
       ]);
+
+      const [{ data: removedUnits }, { data: removedChests }, { data: removedSummons }] = await Promise.all([
+        supabase.from("units").select("id, slug, name, photo_url, rarity, tier").eq("removed_update_id", update.id),
+        supabase.from("chests").select("id, slug, name, image_url").eq("removed_update_id", update.id),
+        supabase.from("summons").select("id, slug, name, banner_url").eq("removed_update_id", update.id),
+      ]);
+
       return {
         update,
         units: (units || []).map((r: any) => r.unit).filter(Boolean),
         chests: (chests || []).map((r: any) => r.chest).filter(Boolean),
+        summons: (summons || []).map((r: any) => r.summon).filter(Boolean),
+        removedUnits: removedUnits || [],
+        removedChests: removedChests || [],
+        removedSummons: removedSummons || [],
       };
     },
   });
 
   if (isLoading) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
   if (!data) return <Page><Card className="p-8 text-center">Update not found. <Link to="/updates" className="text-primary underline">Back to updates</Link></Card></Page>;
-  const { update, units, chests } = data;
+  const { update, units, chests, summons, removedUnits, removedChests, removedSummons } = data;
 
   return (
     <Page>
@@ -61,7 +73,7 @@ function UpdateDetail() {
       <Card className="p-5 mb-6">
         <h2 className="font-semibold mb-3">Units added ({units.length})</h2>
         {units.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No units linked to this update.</p>
+          <p className="text-sm text-muted-foreground">No units added in this update.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
             {units.map((u: any) => (
@@ -79,10 +91,30 @@ function UpdateDetail() {
         )}
       </Card>
 
-      <Card className="p-5">
+      <Card className="p-5 mb-6">
+        <h2 className="font-semibold mb-3">Summons added ({summons.length})</h2>
+        {summons.length === 0 ? (
+          <p className="text-sm text-muted-foreground">No summons added in this update.</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+            {summons.map((s: any) => (
+              <Link key={s.id} to="/summons/$slug" params={{ slug: s.slug }}
+                className="rounded-lg border bg-muted/30 p-2 hover:border-primary/40 transition">
+                <div className="aspect-[16/9] w-full rounded-md bg-muted overflow-hidden mb-2">
+                  {s.banner_url ? <img src={s.banner_url} alt="" className="h-full w-full object-contain" /> :
+                    <div className="h-full w-full grid place-items-center text-muted-foreground"><Sparkles className="h-6 w-6" /></div>}
+                </div>
+                <div className="text-sm font-medium truncate text-center">{s.name}</div>
+              </Link>
+            ))}
+          </div>
+        )}
+      </Card>
+
+      <Card className="p-5 mb-6">
         <h2 className="font-semibold mb-3">Chests added ({chests.length})</h2>
         {chests.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No chests linked to this update.</p>
+          <p className="text-sm text-muted-foreground">No chests added in this update.</p>
         ) : (
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             {chests.map((c: any) => (
@@ -98,6 +130,68 @@ function UpdateDetail() {
           </div>
         )}
       </Card>
+
+      {(removedUnits.length > 0 || removedSummons.length > 0 || removedChests.length > 0) && (
+        <>
+          <h2 className="text-lg font-bold mt-8 mb-3 text-destructive">Removed in this update</h2>
+
+          {removedUnits.length > 0 && (
+            <Card className="p-5 mb-6">
+              <h3 className="font-semibold mb-3">Units removed ({removedUnits.length})</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                {removedUnits.map((u: any) => (
+                  <Link key={u.id} to="/units/$slug" params={{ slug: u.slug }}
+                    className="rounded-lg border bg-muted/30 p-2 text-center hover:border-primary/40 transition">
+                    <div className="aspect-square w-full rounded-md bg-muted overflow-hidden mb-2">
+                      {u.photo_url ? <img src={u.photo_url} alt="" className="h-full w-full object-contain" /> :
+                        <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-6 w-6" /></div>}
+                    </div>
+                    <div className="text-sm font-medium truncate">{u.name}</div>
+                    {u.rarity && <span className={`text-[10px] px-1 py-0.5 rounded border ${rarityClass(u.rarity)}`}>{u.rarity}</span>}
+                  </Link>
+                ))}
+              </div>
+              <p className="text-xs text-muted-foreground mt-3">Removed units are still available in trading.</p>
+            </Card>
+          )}
+
+          {removedSummons.length > 0 && (
+            <Card className="p-5 mb-6">
+              <h3 className="font-semibold mb-3">Summons removed ({removedSummons.length})</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {removedSummons.map((s: any) => (
+                  <Link key={s.id} to="/summons/$slug" params={{ slug: s.slug }}
+                    className="rounded-lg border bg-muted/30 p-2 hover:border-primary/40 transition">
+                    <div className="aspect-[16/9] w-full rounded-md bg-muted overflow-hidden mb-2">
+                      {s.banner_url ? <img src={s.banner_url} alt="" className="h-full w-full object-contain" /> :
+                        <div className="h-full w-full grid place-items-center text-muted-foreground"><Sparkles className="h-6 w-6" /></div>}
+                    </div>
+                    <div className="text-sm font-medium truncate text-center">{s.name}</div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
+
+          {removedChests.length > 0 && (
+            <Card className="p-5 mb-6">
+              <h3 className="font-semibold mb-3">Chests removed ({removedChests.length})</h3>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                {removedChests.map((c: any) => (
+                  <Link key={c.id} to="/chests/$slug" params={{ slug: c.slug }}
+                    className="rounded-lg border bg-muted/30 p-2 hover:border-primary/40 transition">
+                    <div className="aspect-[16/9] w-full rounded-md bg-muted overflow-hidden mb-2">
+                      {c.image_url ? <img src={c.image_url} alt="" className="h-full w-full object-contain" /> :
+                        <div className="h-full w-full grid place-items-center text-muted-foreground"><Package className="h-6 w-6" /></div>}
+                    </div>
+                    <div className="text-sm font-medium truncate text-center">{c.name}</div>
+                  </Link>
+                ))}
+              </div>
+            </Card>
+          )}
+        </>
+      )}
     </Page>
   );
 }
