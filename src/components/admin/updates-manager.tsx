@@ -88,6 +88,22 @@ export function UpdatesManager() {
   );
 }
 
+function CheckList({ title, count, items, selected, onToggle }: { title: string; count: number; items: any[]; selected: string[]; onToggle: (id: string) => void }) {
+  return (
+    <div>
+      <h3 className="font-semibold mb-2">{title} ({count})</h3>
+      <div className="max-h-48 overflow-y-auto rounded border p-2 grid sm:grid-cols-2 gap-1">
+        {items.map((item: any) => (
+          <label key={item.id} className="flex items-center gap-2 text-sm py-1 px-2 hover:bg-accent rounded cursor-pointer">
+            <input type="checkbox" checked={selected.includes(item.id)} onChange={() => onToggle(item.id)} />
+            <span className="truncate">{item.name}{item.rarity ? ` (${item.rarity})` : ""}</span>
+          </label>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }) {
   const qc = useQueryClient();
   const [name, setName] = useState(existing?.name || "");
@@ -96,37 +112,71 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
   const [imageUrl, setImageUrl] = useState(existing?.image_url || "");
   const [description, setDescription] = useState(existing?.description || "");
   const [releasedAt, setReleasedAt] = useState(existing?.released_at || "");
+
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [chestIds, setChestIds] = useState<string[]>([]);
+  const [summonIds, setSummonIds] = useState<string[]>([]);
+  const [removedUnitIds, setRemovedUnitIds] = useState<string[]>([]);
+  const [removedChestIds, setRemovedChestIds] = useState<string[]>([]);
+  const [removedSummonIds, setRemovedSummonIds] = useState<string[]>([]);
   const [loaded, setLoaded] = useState(!existing);
 
   const { data: units } = useQuery({
     queryKey: ["all-units-tiny"],
-    queryFn: async () => (await supabase.from("units").select("id, name, rarity").order("name")).data || [],
+    queryFn: async () => (await supabase.from("units").select("id, name, rarity, removed_update_id").order("name")).data || [],
   });
   const { data: chests } = useQuery({
     queryKey: ["all-chests-tiny"],
-    queryFn: async () => (await supabase.from("chests").select("id, name").order("name")).data || [],
+    queryFn: async () => (await supabase.from("chests").select("id, name, removed_update_id").order("name")).data || [],
+  });
+  const { data: summons } = useQuery({
+    queryKey: ["all-summons-tiny"],
+    queryFn: async () => (await supabase.from("summons").select("id, name, removed_update_id").order("name")).data || [],
   });
 
   useQuery({
     queryKey: ["update-links", existing?.id],
     enabled: !!existing?.id,
     queryFn: async () => {
-      const [u, c] = await Promise.all([
+      const [u, c, s] = await Promise.all([
         supabase.from("update_units").select("unit_id").eq("update_id", existing.id),
         supabase.from("update_chests").select("chest_id").eq("update_id", existing.id),
+        supabase.from("update_summons").select("summon_id").eq("update_id", existing.id),
       ]);
       setUnitIds((u.data || []).map((r: any) => r.unit_id));
       setChestIds((c.data || []).map((r: any) => r.chest_id));
+      setSummonIds((s.data || []).map((r: any) => r.summon_id));
       setLoaded(true);
       return true;
     },
   });
 
+  // Once units/chests/summons load, pre-check whichever ones this update already marked as removed
+  if (existing && loaded && units && removedUnitIds.length === 0) {
+    const ids = units.filter((x: any) => x.removed_update_id === existing.id).map((x: any) => x.id);
+    if (ids.length) setRemovedUnitIds(ids);
+  }
+  if (existing && loaded && chests && removedChestIds.length === 0) {
+    const ids = chests.filter((x: any) => x.removed_update_id === existing.id).map((x: any) => x.id);
+    if (ids.length) setRemovedChestIds(ids);
+  }
+  if (existing && loaded && summons && removedSummonIds.length === 0) {
+    const ids = summons.filter((x: any) => x.removed_update_id === existing.id).map((x: any) => x.id);
+    if (ids.length) setRemovedSummonIds(ids);
+  }
+
   function autoSlug(v: string) { if (!slugTouched) setSlug(slugify(v)); setName(v); }
   function toggle(arr: string[], id: string, set: (v: string[]) => void) {
     set(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
+  }
+
+  async function syncRemoved(table: "units" | "chests" | "summons", currentlyMarkedHere: string[], updateId: string) {
+    // Anything checked now -> mark as removed by this update
+    if (currentlyMarkedHere.length) {
+      await supabase.from(table).update({ removed_update_id: updateId }).in("id", currentlyMarkedHere);
+    }
+    // Anything that WAS marked removed by this update but is no longer checked -> clear it
+    await supabase.from(table).update({ removed_update_id: null }).eq("removed_update_id", updateId).not("id", "in", `(${currentlyMarkedHere.length ? currentlyMarkedHere.map((x) => `"${x}"`).join(",") : "00000000-0000-0000-0000-000000000000"})`);
   }
 
   const save = useMutation({
@@ -145,19 +195,19 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
         if (error) throw error;
         await supabase.from("update_units").delete().eq("update_id", id);
         await supabase.from("update_chests").delete().eq("update_id", id);
+        await supabase.from("update_summons").delete().eq("update_id", id);
       } else {
         const { data, error } = await supabase.from("updates").insert(payload).select("id").single();
         if (error) throw error;
         id = data.id;
       }
-      if (unitIds.length) {
-        const { error } = await supabase.from("update_units").insert(unitIds.map((unit_id) => ({ update_id: id, unit_id })));
-        if (error) throw error;
-      }
-      if (chestIds.length) {
-        const { error } = await supabase.from("update_chests").insert(chestIds.map((chest_id) => ({ update_id: id, chest_id })));
-        if (error) throw error;
-      }
+      if (unitIds.length) await supabase.from("update_units").insert(unitIds.map((unit_id) => ({ update_id: id, unit_id })));
+      if (chestIds.length) await supabase.from("update_chests").insert(chestIds.map((chest_id) => ({ update_id: id, chest_id })));
+      if (summonIds.length) await supabase.from("update_summons").insert(summonIds.map((summon_id) => ({ update_id: id, summon_id })));
+
+      await syncRemoved("units", removedUnitIds, id);
+      await syncRemoved("chests", removedChestIds, id);
+      await syncRemoved("summons", removedSummonIds, id);
     },
     onSuccess: () => {
       toast.success("Saved");
@@ -165,6 +215,8 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
       qc.invalidateQueries({ queryKey: ["updates"] });
       qc.invalidateQueries({ queryKey: ["unit"] });
       qc.invalidateQueries({ queryKey: ["chest"] });
+      qc.invalidateQueries({ queryKey: ["summon"] });
+      qc.invalidateQueries({ queryKey: ["units", "all"] });
       onDone();
     },
     onError: (e: any) => toast.error(e.message),
@@ -182,29 +234,15 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
         <div className="md:col-span-2"><Label>Description</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
       </div>
 
-      <div>
-        <h3 className="font-semibold mb-2">Units added ({unitIds.length})</h3>
-        <div className="max-h-56 overflow-y-auto rounded border p-2 grid sm:grid-cols-2 gap-1">
-          {(units || []).map((u: any) => (
-            <label key={u.id} className="flex items-center gap-2 text-sm py-1 px-2 hover:bg-accent rounded cursor-pointer">
-              <input type="checkbox" checked={unitIds.includes(u.id)} onChange={() => toggle(unitIds, u.id, setUnitIds)} />
-              <span className="truncate">{u.name}{u.rarity ? ` (${u.rarity})` : ""}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+      <p className="text-xs text-muted-foreground border-t pt-3">Items added in this update:</p>
+      <CheckList title="Units added" count={unitIds.length} items={units || []} selected={unitIds} onToggle={(id) => toggle(unitIds, id, setUnitIds)} />
+      <CheckList title="Summons added" count={summonIds.length} items={summons || []} selected={summonIds} onToggle={(id) => toggle(summonIds, id, setSummonIds)} />
+      <CheckList title="Chests added" count={chestIds.length} items={chests || []} selected={chestIds} onToggle={(id) => toggle(chestIds, id, setChestIds)} />
 
-      <div>
-        <h3 className="font-semibold mb-2">Chests added ({chestIds.length})</h3>
-        <div className="max-h-56 overflow-y-auto rounded border p-2 grid sm:grid-cols-2 gap-1">
-          {(chests || []).map((c: any) => (
-            <label key={c.id} className="flex items-center gap-2 text-sm py-1 px-2 hover:bg-accent rounded cursor-pointer">
-              <input type="checkbox" checked={chestIds.includes(c.id)} onChange={() => toggle(chestIds, c.id, setChestIds)} />
-              <span className="truncate">{c.name}</span>
-            </label>
-          ))}
-        </div>
-      </div>
+      <p className="text-xs text-muted-foreground border-t pt-3">Items removed in this update (units stay tradeable even when removed):</p>
+      <CheckList title="Units removed" count={removedUnitIds.length} items={units || []} selected={removedUnitIds} onToggle={(id) => toggle(removedUnitIds, id, setRemovedUnitIds)} />
+      <CheckList title="Summons removed" count={removedSummonIds.length} items={summons || []} selected={removedSummonIds} onToggle={(id) => toggle(removedSummonIds, id, setRemovedSummonIds)} />
+      <CheckList title="Chests removed" count={removedChestIds.length} items={chests || []} selected={removedChestIds} onToggle={(id) => toggle(removedChestIds, id, setRemovedChestIds)} />
 
       <div className="flex gap-2 justify-end">
         <Button variant="outline" onClick={onDone}>Cancel</Button>
