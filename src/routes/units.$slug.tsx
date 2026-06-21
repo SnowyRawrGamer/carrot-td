@@ -16,6 +16,10 @@ export const Route = createFileRoute("/units/$slug")({
 
 type StatsMap = Record<string, string | number>;
 
+function fmtDate(d?: string | null) {
+  return d ? new Date(d + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : null;
+}
+
 function UnitDetail() {
   const { slug } = Route.useParams();
   const { data, isLoading } = useQuery({
@@ -39,17 +43,22 @@ function UnitDetail() {
         .map((r: any) => r.update)
         .filter(Boolean)
         .sort((a: any, b: any) => (a.released_at || "").localeCompare(b.released_at || ""))[0] || null;
-      return { unit, paths: paths || [], levels: levels || [], addedIn };
+
+      let removedIn = null;
+      if (unit.removed_update_id) {
+        const { data: ru } = await supabase.from("updates").select("id, slug, name, released_at").eq("id", unit.removed_update_id).maybeSingle();
+        removedIn = ru;
+      }
+      return { unit, paths: paths || [], levels: levels || [], addedIn, removedIn };
     },
   });
 
   if (isLoading) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
   if (!data) return null;
-  const { unit, paths, levels, addedIn } = data;
+  const { unit, paths, levels, addedIn, removedIn } = data;
   const baseStats = (unit.base_stats || {}) as StatsMap;
-  const addedDate = addedIn?.released_at
-    ? new Date(addedIn.released_at + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" })
-    : null;
+  const addedDate = fmtDate(addedIn?.released_at);
+  const removedDate = fmtDate(removedIn?.released_at);
 
   return (
     <Page>
@@ -57,13 +66,40 @@ function UnitDetail() {
         <ArrowLeft className="h-4 w-4 mr-1" /> All units
       </Link>
 
-      {addedIn && (
-        <Card className="p-3 mb-4 bg-primary/5 border-primary/30 text-sm">
-          Added in{" "}
-          <Link to="/updates/$slug" params={{ slug: addedIn.slug }} className="font-semibold text-primary hover:underline">
-            {addedIn.name}
-          </Link>
-          {addedDate ? ` on ${addedDate}` : ""}.
+      {(addedIn || removedIn) && (
+        <Card className="p-3 mb-4 bg-primary/5 border-primary/30 text-sm space-y-1">
+          {addedIn && (
+            <p>
+              This unit was added on{" "}
+              <Link to="/updates/$slug" params={{ slug: addedIn.slug }} className="font-semibold text-primary hover:underline">
+                {addedIn.name}
+              </Link>
+              {addedDate ? ` (${addedDate})` : ""}
+              {removedIn && " and"}
+              {removedIn && (
+                <>
+                  {" "}removed on{" "}
+                  <Link to="/updates/$slug" params={{ slug: removedIn.slug }} className="font-semibold text-primary hover:underline">
+                    {removedIn.name}
+                  </Link>
+                  {removedDate ? ` (${removedDate})` : ""}
+                </>
+              )}
+              .
+            </p>
+          )}
+          {!addedIn && removedIn && (
+            <p>
+              This unit was removed on{" "}
+              <Link to="/updates/$slug" params={{ slug: removedIn.slug }} className="font-semibold text-primary hover:underline">
+                {removedIn.name}
+              </Link>
+              {removedDate ? ` (${removedDate})` : ""}.
+            </p>
+          )}
+          {removedIn && (
+            <p className="text-muted-foreground text-xs">Removed units are still available in trading.</p>
+          )}
         </Card>
       )}
 
@@ -81,6 +117,7 @@ function UnitDetail() {
             <div className="flex flex-wrap gap-1.5 mt-2">
               {unit.rarity && <span className={`text-xs px-2 py-0.5 rounded border ${rarityClass(unit.rarity)}`}>{unit.rarity}</span>}
               {unit.tier && <span className="text-xs px-2 py-0.5 rounded border bg-muted text-muted-foreground">Tier {unit.tier}</span>}
+              {removedIn && <span className="text-xs px-2 py-0.5 rounded border bg-destructive/10 text-destructive border-destructive/30">Removed</span>}
             </div>
             {unit.description && <p className="text-sm text-muted-foreground mt-3">{unit.description}</p>}
           </div>
