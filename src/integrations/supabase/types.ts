@@ -102,6 +102,7 @@ export type Database = {
           id: string
           image_url: string | null
           name: string
+          removed_update_id: string | null
           slug: string
           updated_at: string
         }
@@ -111,6 +112,7 @@ export type Database = {
           id?: string
           image_url?: string | null
           name: string
+          removed_update_id?: string | null
           slug: string
           updated_at?: string
         }
@@ -120,10 +122,19 @@ export type Database = {
           id?: string
           image_url?: string | null
           name?: string
+          removed_update_id?: string | null
           slug?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "chests_removed_update_id_fkey"
+            columns: ["removed_update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       community_loadout_units: {
         Row: {
@@ -305,24 +316,121 @@ export type Database = {
         }
         Relationships: []
       }
+      site_note_comments: {
+        Row: {
+          author_id: string
+          body: string
+          created_at: string
+          id: string
+          note_id: string
+        }
+        Insert: {
+          author_id: string
+          body: string
+          created_at?: string
+          id?: string
+          note_id: string
+        }
+        Update: {
+          author_id?: string
+          body?: string
+          created_at?: string
+          id?: string
+          note_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_note_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_note_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_note_comments_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "site_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      site_notes: {
+        Row: {
+          body: string | null
+          created_at: string
+          created_by: string
+          id: string
+          status: string
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          body?: string | null
+          created_at?: string
+          created_by: string
+          id?: string
+          status?: string
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          body?: string | null
+          created_at?: string
+          created_by?: string
+          id?: string
+          status?: string
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       summon_entries: {
         Row: {
+          custom_image_url: string | null
+          custom_name: string | null
           drop_rate: number
           id: string
           summon_id: string
-          unit_id: string
+          unit_id: string | null
         }
         Insert: {
+          custom_image_url?: string | null
+          custom_name?: string | null
           drop_rate?: number
           id?: string
           summon_id: string
-          unit_id: string
+          unit_id?: string | null
         }
         Update: {
+          custom_image_url?: string | null
+          custom_name?: string | null
           drop_rate?: number
           id?: string
           summon_id?: string
-          unit_id?: string
+          unit_id?: string | null
         }
         Relationships: [
           {
@@ -347,7 +455,9 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          is_custom: boolean
           name: string
+          removed_update_id: string | null
           slug: string
           updated_at: string
         }
@@ -356,7 +466,9 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_custom?: boolean
           name: string
+          removed_update_id?: string | null
           slug: string
           updated_at?: string
         }
@@ -365,11 +477,21 @@ export type Database = {
           created_at?: string
           description?: string | null
           id?: string
+          is_custom?: boolean
           name?: string
+          removed_update_id?: string | null
           slug?: string
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "summons_removed_update_id_fkey"
+            columns: ["removed_update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       unit_upgrade_levels: {
         Row: {
@@ -442,6 +564,7 @@ export type Database = {
           name: string
           photo_url: string | null
           rarity: string | null
+          removed_update_id: string | null
           slug: string
           tier: string | null
           updated_at: string
@@ -455,6 +578,7 @@ export type Database = {
           name: string
           photo_url?: string | null
           rarity?: string | null
+          removed_update_id?: string | null
           slug: string
           tier?: string | null
           updated_at?: string
@@ -468,11 +592,20 @@ export type Database = {
           name?: string
           photo_url?: string | null
           rarity?: string | null
+          removed_update_id?: string | null
           slug?: string
           tier?: string | null
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "units_removed_update_id_fkey"
+            columns: ["removed_update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       update_chests: {
         Row: {
@@ -497,6 +630,36 @@ export type Database = {
           },
           {
             foreignKeyName: "update_chests_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      update_summons: {
+        Row: {
+          summon_id: string
+          update_id: string
+        }
+        Insert: {
+          summon_id: string
+          update_id: string
+        }
+        Update: {
+          summon_id?: string
+          update_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "update_summons_summon_id_fkey"
+            columns: ["summon_id"]
+            isOneToOne: false
+            referencedRelation: "summons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "update_summons_update_id_fkey"
             columns: ["update_id"]
             isOneToOne: false
             referencedRelation: "updates"
