@@ -95,16 +95,23 @@ export function levelBreakdown(unit: any, paths: any[], levels: any[], pathIndex
 }
 
 export interface SlotForTotals { resolved: ResolvedUnit; placementCount: number; }
-export interface LoadoutTotals { totalDamage: number; totalCost: number; missingPlacementUnits: string[]; }
+eexport interface LoadoutTotals {
+  totalDamage: number;
+  totalCost: number;
+  totalPlacement: number;
+  overPlacementLimit: boolean;
+  missingPlacementUnits: string[];
+}
 
 export function computeLoadoutTotals(slots: SlotForTotals[]): LoadoutTotals {
-  let totalDamage = 0, totalCost = 0;
+  let totalDamage = 0, totalCost = 0, totalPlacement = 0;
   const missingPlacementUnits: string[] = [];
   for (const { resolved: u, placementCount } of slots) {
     const damage = Number(u.stats["damage"] ?? 0) || 0;
     totalDamage += damage * placementCount;
     totalCost += u.totalCost * placementCount;
+    totalPlacement += placementCount;
     if (u.missingPlacement) missingPlacementUnits.push(u.name);
   }
-  return { totalDamage, totalCost, missingPlacementUnits };
+  return { totalDamage, totalCost, totalPlacement, overPlacementLimit: totalPlacement > 20, missingPlacementUnits };
 }
