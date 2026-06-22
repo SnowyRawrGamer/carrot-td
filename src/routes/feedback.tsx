@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
-import { AlertCircle, Clock, CheckCircle2, MessageSquare, X, Edit2, Check, Trash2 } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
+import { AlertCircle, Clock, CheckCircle2, MessageSquare, X, Edit2, Check, Trash2, Send } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -24,6 +24,9 @@ function FeedbackPage() {
   const [editingId, setEditingId] = useState<string | null>(null);
   const [editBody, setEditBody] = useState("");
   const [editCategory, setEditCategory] = useState("");
+  const [openThreadId, setOpenThreadId] = useState<string | null>(null);
+  const [replyBody, setReplyBody] = useState("");
+  const scrollRef = useRef<HTMLDivElement>(null);
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ["my-feedback", user?.id],
@@ -40,6 +43,26 @@ function FeedbackPage() {
     enabled: !!user,
   });
 
+  const { data: messages } = useQuery({
+    queryKey: ["feedback-messages", openThreadId],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_note_comments")
+        .select("*, author:public_profiles!author_id(display_name, public_name)")
+        .eq("note_id", openThreadId!)
+        .order("created_at", { ascending: true });
+      if (error) throw error;
+      return data;
+    },
+    enabled: !!openThreadId,
+  });
+
+  useEffect(() => {
+    if (scrollRef.current) {
+      scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
+    }
+  }, [messages]);
+
   const submit = useMutation({
     mutationFn: async () => {
       if (!user) throw new Error("Please sign in first");
@@ -52,7 +75,7 @@ function FeedbackPage() {
           body: `User: ${user.email}\n\n${body}`,
           status: "viewer_ideas",
           created_by: user.id,
-          is_feedback: true // Explicitly mark as feedback
+          is_feedback: true
         })
         .select()
         .single();
@@ -123,6 +146,23 @@ function FeedbackPage() {
     onSuccess: () => {
       toast.success("Feedback deleted");
       qc.invalidateQueries({ queryKey: ["my-feedback"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const postReply = useMutation({
+    mutationFn: async () => {
+      if (!user || !openThreadId || !replyBody.trim()) return;
+      const { error } = await supabase.from("site_note_comments").insert({
+        note_id: openThreadId,
+        author_id: user.id,
+        body: replyBody.trim()
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      setReplyBody("");
+      qc.invalidateQueries({ queryKey: ["feedback-messages", openThreadId] });
     },
     onError: (e: any) => toast.error(e.message),
   });
@@ -251,30 +291,90 @@ function FeedbackPage() {
                             {sub.status === 'accepted' && <><CheckCircle2 className="h-3 w-3 text-green-500" /> Accepted</>}
                             {sub.status === 'declined' && <><X className="h-3 w-3 text-destructive" /> Declined</>}
                             {sub.status === 'maybe' && <><Clock className="h-3 w-3 text-blue-500" /> Maybe</>}
+                            {sub.status === 'working' && <><Clock className="h-3 w-3 text-blue-400" /> Working</>}
+                            {sub.status === 'completed' && <><CheckCircle2 className="h-3 w-3 text-emerald-500" /> Completed</>}
                           </div>
                         </div>
-                        {sub.status === 'pending' && (
-                          <div className="flex gap-1 -mt-1">
-                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditing(sub)}>
-                              <Edit2 className="h-3 w-3" />
-                            </Button>
-                            <Button 
-                              variant="ghost" 
-                              size="icon" 
-                              className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10" 
-                              onClick={() => {
-                                if (confirm("Delete this submission?")) {
-                                  remove.mutate({ id: sub.id, noteId: sub.note_id });
-                                }
-                              }}
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </Button>
-                          </div>
-                        )}
+                        <div className="flex gap-1 -mt-1">
+                          <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setOpenThreadId(openThreadId === sub.note_id ? null : sub.note_id)}>
+                            <MessageSquare className={`h-3 w-3 ${openThreadId === sub.note_id ? 'text-primary' : ''}`} />
+                          </Button>
+                          {sub.status === 'pending' && (
+                            <>
+                              <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditing(sub)}>
+                                <Edit2 className="h-3 w-3" />
+                              </Button>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10" 
+                                onClick={() => {
+                                  if (confirm("Delete this submission?")) {
+                                    remove.mutate({ id: sub.id, noteId: sub.note_id });
+                                  }
+                                }}
+                              >
+                                <Trash2 className="h-3 w-3" />
+                              </Button>
+                            </>
+                          )}
+                        </div>
                       </div>
                       <p className="text-sm line-clamp-3">{sub.body}</p>
-                      {sub.admin_response && (
+                      
+                      {openThreadId === sub.note_id && (
+                        <div className="mt-4 border rounded-lg bg-muted/20 overflow-hidden">
+                          <div className="p-3 border-b bg-muted/30 font-semibold text-xs flex justify-between items-center">
+                            <span>Conversation</span>
+                            <Button variant="ghost" size="icon" className="h-5 w-5" onClick={() => setOpenThreadId(null)}>
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div ref={scrollRef} className="max-h-[300px] overflow-y-auto p-3 space-y-3">
+                            {messages?.map((m: any) => (
+                              <div key={m.id} className={`flex flex-col ${m.author_id === user.id ? 'items-end' : 'items-start'}`}>
+                                <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${m.author_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                  <p>{m.body}</p>
+                                </div>
+                                <span className="text-[10px] text-muted-foreground mt-1">
+                                  {m.author?.public_name || m.author?.display_name || "User"} • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                </span>
+                              </div>
+                            ))}
+                            {(!messages || messages.length === 0) && (
+                              <p className="text-center text-xs text-muted-foreground py-4 italic">No messages yet.</p>
+                            )}
+                          </div>
+                          
+                          {sub.allow_response && (
+                            <div className="p-3 bg-background border-t flex gap-2">
+                              <Textarea 
+                                placeholder="Write a response..." 
+                                className="min-h-[40px] text-sm resize-none"
+                                rows={1}
+                                value={replyBody}
+                                onChange={(e) => setReplyBody(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter' && !e.shiftKey) {
+                                    e.preventDefault();
+                                    postReply.mutate();
+                                  }
+                                }}
+                              />
+                              <Button size="icon" onClick={() => postReply.mutate()} disabled={!replyBody.trim() || postReply.isPending}>
+                                <Send className="h-4 w-4" />
+                              </Button>
+                            </div>
+                          )}
+                          {!sub.allow_response && (
+                            <div className="p-3 bg-muted/30 border-t text-[10px] text-center text-muted-foreground italic">
+                              Response requested by admin to enable chat.
+                            </div>
+                          )}
+                        </div>
+                      )}
+
+                      {sub.admin_response && !openThreadId && (
                         <div className="mt-3 p-3 bg-primary/5 border-l-2 border-primary rounded-r-md">
                           <div className="flex items-center gap-1.5 text-xs font-bold text-primary mb-1">
                             <MessageSquare className="h-3 w-3" /> ADMIN RESPONSE

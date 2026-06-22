@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Edit2, Check, X, ThumbsUp, ThumbsDown, HelpCircle, Shield } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Edit2, Check, X, ThumbsUp, ThumbsDown, HelpCircle, Shield, MessageCircle } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Switch } from "@/components/ui/switch";
 import { toast } from "sonner";
 
 const COLUMNS: { key: string; label: string }[] = [
@@ -20,6 +21,15 @@ const COLUMNS: { key: string; label: string }[] = [
   { key: "working", label: "Working on it" },
   { key: "completed", label: "Completed" },
 ];
+
+const STATUS_MAP: Record<string, string> = {
+  viewer_ideas: "pending",
+  declined: "declined",
+  maybe: "maybe",
+  accepted: "accepted",
+  working: "working",
+  completed: "completed"
+};
 
 export function NotesManager() {
   const qc = useQueryClient();
@@ -70,7 +80,7 @@ export function NotesManager() {
         body: newBody.trim() || null, 
         created_by: user.id, 
         status: "viewer_ideas",
-        is_feedback: false // Explicitly mark as not feedback
+        is_feedback: false
       });
       if (error) throw error;
     },
@@ -84,8 +94,22 @@ export function NotesManager() {
 
   const move = useMutation({
     mutationFn: async ({ id, status }: { id: string; status: string }) => {
-      const { error } = await supabase.from("site_notes").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
-      if (error) throw error;
+      const { error: noteError } = await supabase
+        .from("site_notes")
+        .update({ status, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (noteError) throw noteError;
+
+      const userStatus = STATUS_MAP[status];
+      if (userStatus) {
+        const { error: feedbackError } = await (supabase as any)
+          .from("site_feedback")
+          .update({ status: userStatus, updated_at: new Date().toISOString() })
+          .eq("note_id", id);
+        if (feedbackError) {
+          console.error("Feedback status sync failed", feedbackError);
+        }
+      }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["site-notes"] }),
     onError: (e: any) => toast.error(e.message),
@@ -93,6 +117,13 @@ export function NotesManager() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
+      // First delete associated feedback
+      const { error: feedbackError } = await (supabase as any)
+        .from("site_feedback")
+        .delete()
+        .eq("note_id", id);
+      if (feedbackError) console.warn("Feedback deletion failed", feedbackError);
+
       const { error } = await supabase.from("site_notes").delete().eq("id", id);
       if (error) throw error;
     },
@@ -175,6 +206,21 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
   const [editTitle, setEditTitle] = useState(note.title);
   const [editBody, setEditBody] = useState(note.body || "");
   const [adminResponse, setAdminResponse] = useState("");
+  const [allowResponse, setAllowResponse] = useState(false);
+
+  const { data: feedback } = useQuery({
+    queryKey: ["linked-feedback", note.id],
+    queryFn: async () => {
+      const { data, error } = await (supabase as any)
+        .from("site_feedback")
+        .select("*")
+        .eq("note_id", note.id)
+        .single();
+      if (error) return null;
+      return data;
+    },
+    enabled: note.is_feedback
+  });
 
   const { data: comments } = useQuery({
     queryKey: ["note-comments", note.id],
@@ -215,7 +261,11 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
     mutationFn: async () => {
       if (!user) throw new Error("Not signed in");
       if (!comment.trim()) return;
-      const { error } = await supabase.from("site_note_comments").insert({ note_id: note.id, author_id: user.id, body: comment.trim() });
+      const { error } = await supabase.from("site_note_comments").insert({ 
+        note_id: note.id, 
+        author_id: user.id, 
+        body: comment.trim() 
+      });
       if (error) throw error;
     },
     onSuccess: () => { setComment(""); qc.invalidateQueries({ queryKey: ["note-comments", note.id] }); },
@@ -242,6 +292,21 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
     onError: (e: any) => toast.error(e.message),
   });
 
+  const toggleResponse = useMutation({
+    mutationFn: async (val: boolean) => {
+      const { error } = await (supabase as any)
+        .from("site_feedback")
+        .update({ allow_response: val })
+        .eq("note_id", note.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Settings updated");
+      qc.invalidateQueries({ queryKey: ["linked-feedback", note.id] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   const resolveFeedback = useMutation({
     mutationFn: async (resolution: "accepted" | "declined" | "maybe") => {
       const { error: feedbackError } = await (supabase as any)
@@ -254,6 +319,15 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
         .eq("note_id", note.id);
 
       if (feedbackError) throw feedbackError;
+
+      // If there's an admin response, post it as a comment too for the conversation view
+      if (adminResponse.trim()) {
+        await supabase.from("site_note_comments").insert({
+          note_id: note.id,
+          author_id: user?.id,
+          body: adminResponse.trim()
+        });
+      }
 
       onMove(resolution);
     },
@@ -302,7 +376,16 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
 
       {note.is_feedback === true && (
         <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
-          <h4 className="text-sm font-bold flex items-center gap-1.5"><Shield className="h-4 w-4" /> Resolve Feedback</h4>
+          <div className="flex justify-between items-center">
+            <h4 className="text-sm font-bold flex items-center gap-1.5"><Shield className="h-4 w-4" /> Resolve Feedback</h4>
+            <div className="flex items-center gap-2">
+              <Label className="text-[10px] uppercase font-bold text-muted-foreground">Allow Response</Label>
+              <Switch 
+                checked={feedback?.allow_response || false} 
+                onCheckedChange={(val) => toggleResponse.mutate(val)} 
+              />
+            </div>
+          </div>
           <div>
             <Label className="text-xs">Quick Response (optional)</Label>
             <Input 
@@ -354,15 +437,24 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
       </div>
 
       <div className="border-t pt-3 space-y-2">
-        <h4 className="text-sm font-semibold flex items-center gap-1"><MessageSquare className="h-4 w-4" /> Comments ({comments?.length || 0})</h4>
-        {(comments || []).map((c: any) => (
-          <div key={c.id} className="text-sm bg-muted/40 rounded p-2">
-            <span className="font-medium">{c.author?.public_name || c.author?.display_name || "User"}:</span> {c.body}
-          </div>
-        ))}
+        <h4 className="text-sm font-semibold flex items-center gap-1"><MessageSquare className="h-4 w-4" /> Conversation ({comments?.length || 0})</h4>
+        <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1">
+          {(comments || []).map((c: any) => (
+            <div key={c.id} className={`text-sm rounded p-2 ${c.author_id === user?.id ? 'bg-primary/5 border-l-2 border-primary ml-4' : 'bg-muted/40 mr-4'}`}>
+              <div className="flex justify-between items-center mb-1">
+                <span className="font-bold text-[10px] uppercase tracking-wider">{c.author?.public_name || c.author?.display_name || "User"}</span>
+                <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
+              </div>
+              {c.body}
+            </div>
+          ))}
+          {(!comments || comments.length === 0) && (
+            <p className="text-xs text-muted-foreground py-2 italic text-center">No messages in this thread.</p>
+          )}
+        </div>
         <div className="flex gap-2">
-          <Input placeholder="Add a comment..." value={comment} onChange={(e) => setComment(e.target.value)} />
-          <Button size="sm" onClick={() => postComment.mutate()}>Send</Button>
+          <Input placeholder="Add a comment..." value={comment} onChange={(e) => setComment(e.target.value)} onKeyDown={(e) => e.key === 'Enter' && postComment.mutate()} />
+          <Button size="sm" onClick={() => postComment.mutate()} disabled={!comment.trim() || postComment.isPending}>Send</Button>
         </div>
       </div>
 
