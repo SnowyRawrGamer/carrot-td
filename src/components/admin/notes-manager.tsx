@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Edit2, Check, X, ThumbsUp, ThumbsDown, HelpCircle, Shield, MessageCircle } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Edit2, Check, X, ThumbsUp, ThumbsDown, HelpCircle, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -45,11 +45,11 @@ export function NotesManager() {
       try {
         const { data, error } = await supabase
           .from("site_notes")
-          .select("*, author:public_profiles!created_by(display_name, public_name)")
+          .select("*, author:profiles!created_by(display_name, public_name)")
           .order("created_at", { ascending: false });
         
         if (error) {
-          if (error.code === 'PGRST108' || error.message?.includes('public_profiles')) {
+          if (error.code === 'PGRST108' || error.message?.includes('profiles')) {
             const { data: directData, error: directError } = await supabase
               .from("site_notes")
               .select("*")
@@ -102,7 +102,7 @@ export function NotesManager() {
 
       const userStatus = STATUS_MAP[status];
       if (userStatus) {
-        const { error: feedbackError } = await (supabase as any)
+        const { error: feedbackError } = await supabase
           .from("site_feedback")
           .update({ status: userStatus, updated_at: new Date().toISOString() })
           .eq("note_id", id);
@@ -117,8 +117,7 @@ export function NotesManager() {
 
   const remove = useMutation({
     mutationFn: async (id: string) => {
-      // First delete associated feedback
-      const { error: feedbackError } = await (supabase as any)
+      const { error: feedbackError } = await supabase
         .from("site_feedback")
         .delete()
         .eq("note_id", id);
@@ -210,7 +209,7 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
   const { data: feedback } = useQuery({
     queryKey: ["linked-feedback", note.id],
     queryFn: async () => {
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("site_feedback")
         .select("*")
         .eq("note_id", note.id)
@@ -227,12 +226,12 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
       try {
         const { data, error } = await supabase
           .from("site_note_comments")
-          .select("*, author:public_profiles!author_id(display_name, public_name)")
+          .select("*, author:profiles!author_id(display_name, public_name)")
           .eq("note_id", note.id)
           .order("created_at");
         
         if (error) {
-          if (error.code === 'PGRST108' || error.message?.includes('public_profiles')) {
+          if (error.code === 'PGRST108' || error.message?.includes('profiles')) {
             const { data: directData, error: directError } = await supabase
               .from("site_note_comments")
               .select("*")
@@ -293,7 +292,7 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
 
   const toggleResponse = useMutation({
     mutationFn: async (val: boolean) => {
-      const { error } = await (supabase as any)
+      const { error } = await supabase
         .from("site_feedback")
         .update({ allow_response: val })
         .eq("note_id", note.id);
@@ -308,7 +307,7 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
 
   const resolveFeedback = useMutation({
     mutationFn: async (resolution: "accepted" | "declined" | "maybe") => {
-      const { error: feedbackError } = await (supabase as any)
+      const { error: feedbackError } = await supabase
         .from("site_feedback")
         .update({
           status: resolution,

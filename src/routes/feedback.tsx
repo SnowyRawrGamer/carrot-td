@@ -32,7 +32,7 @@ function FeedbackPage() {
     queryKey: ["my-feedback", user?.id],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await (supabase as any)
+      const { data, error } = await supabase
         .from("site_feedback")
         .select("*")
         .eq("user_id", user.id)
@@ -48,7 +48,7 @@ function FeedbackPage() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_note_comments")
-        .select("*, author:public_profiles!author_id(display_name, public_name)")
+        .select("*, author:profiles!author_id(display_name, public_name)")
         .eq("note_id", openThreadId!)
         .order("created_at", { ascending: true });
       if (error) throw error;
@@ -74,15 +74,14 @@ function FeedbackPage() {
           title: `${category}: ${body.substring(0, 40)}${body.length > 40 ? '...' : ''}`,
           body: `User: ${user.email}\n\n${body}`,
           status: "viewer_ideas",
-          created_by: user.id,
-          is_feedback: true
+          created_by: user.id
         })
         .select()
         .single();
 
       if (noteError) throw noteError;
 
-      const { error: feedbackError } = await (supabase as any).from("site_feedback").insert({
+      const { error: feedbackError } = await supabase.from("site_feedback").insert({
         user_id: user.id,
         body: body.trim(),
         category,
@@ -101,7 +100,7 @@ function FeedbackPage() {
 
   const update = useMutation({
     mutationFn: async ({ id, noteId, body, category }: { id: string, noteId: string, body: string, category: string }) => {
-      const { error: feedbackError } = await (supabase as any)
+      const { error: feedbackError } = await supabase
         .from("site_feedback")
         .update({ body, category, updated_at: new Date().toISOString() })
         .eq("id", id);
@@ -129,7 +128,7 @@ function FeedbackPage() {
 
   const remove = useMutation({
     mutationFn: async ({ id, noteId }: { id: string, noteId: string }) => {
-      const { error: feedbackError } = await (supabase as any)
+      const { error: feedbackError } = await supabase
         .from("site_feedback")
         .delete()
         .eq("id", id);
@@ -349,7 +348,7 @@ function FeedbackPage() {
                             )}
                           </div>
                           
-                          {sub.allow_response && (
+                          {(sub.allow_response || sub.status === 'pending') && (
                             <div className="p-3 bg-background border-t flex gap-2">
                               <Textarea 
                                 placeholder="Write a response..." 
@@ -369,7 +368,7 @@ function FeedbackPage() {
                               </Button>
                             </div>
                           )}
-                          {!sub.allow_response && (
+                          {!(sub.allow_response || sub.status === 'pending') && (
                             <div className="p-3 bg-muted/30 border-t text-[10px] text-center text-muted-foreground italic">
                               Response requested by admin to enable chat.
                             </div>
