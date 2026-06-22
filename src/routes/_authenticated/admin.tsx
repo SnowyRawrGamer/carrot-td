@@ -52,6 +52,7 @@ function AdminPage() {
           <TabsTrigger value="chests">Chests</TabsTrigger>
           <TabsTrigger value="updates">Updates</TabsTrigger>
           <TabsTrigger value="loadouts">Loadouts</TabsTrigger>
+          <TabsTrigger value="notes">Notes & Ideas</TabsTrigger>
           {owner && <TabsTrigger value="editors">Editors</TabsTrigger>}
           {owner && <TabsTrigger value="logs">Logs</TabsTrigger>}
         </TabsList>
@@ -60,6 +61,7 @@ function AdminPage() {
         <TabsContent value="chests" className="mt-6"><PoolManager kind="chests" /></TabsContent>
         <TabsContent value="updates" className="mt-6"><UpdatesManager /></TabsContent>
         <TabsContent value="loadouts" className="mt-6"><LoadoutsManager /></TabsContent>
+        <TabsContent value="notes" className="mt-6"><NotesManager /></TabsContent>
         {owner && <TabsContent value="editors" className="mt-6"><EditorsManager /></TabsContent>}
         {owner && <TabsContent value="logs" className="mt-6"><AuditLog /></TabsContent>}
       </Tabs>
