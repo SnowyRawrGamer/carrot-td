@@ -50,10 +50,14 @@ ALTER TABLE public.site_notes DROP CONSTRAINT IF EXISTS site_notes_status_check;
 ALTER TABLE public.site_notes ADD CONSTRAINT site_notes_status_check 
 CHECK (status IN ('viewer_ideas', 'declined', 'idea', 'maybe', 'accepted', 'working', 'completed'));
 
--- 5. Add RLS policy to allow users to create Viewer Ideas in site_notes
-CREATE POLICY "Authenticated users can create viewer ideas"
-ON public.site_notes FOR INSERT
+-- 5. Add RLS policy to allow users to create and view their own Viewer Ideas in site_notes
+-- Drop existing one to ensure we have the correct one
+DROP POLICY IF EXISTS "Authenticated users can create viewer ideas" ON public.site_notes;
+
+CREATE POLICY "Users can create and view their own viewer ideas"
+ON public.site_notes FOR ALL
 TO authenticated
+USING (created_by = auth.uid())
 WITH CHECK (status = 'viewer_ideas' AND created_by = auth.uid());
 
 -- 6. Backfill/Update existing notes to align with new UI labels
