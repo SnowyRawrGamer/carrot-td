@@ -413,6 +413,14 @@ function LoadoutsBuilder() {
           </p>
         </Card>
       )}
+      {totals.overPlacementLimit && (
+  <Card className="p-4 mb-6 border-destructive/40 bg-destructive/5 flex items-start gap-2">
+    <AlertTriangle className="h-4 w-4 text-destructive mt-0.5 shrink-0" />
+    <p className="text-sm text-destructive">
+      This loadout is not possible in game ({totals.totalPlacement}/20 total placement). You can still submit it if you'd like.
+    </p>
+  </Card>
+)}
 
       <Card className="p-5 mb-6">
         <h2 className="font-semibold mb-2">Loadout totals</h2>
