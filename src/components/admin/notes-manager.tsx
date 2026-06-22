@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2 } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Edit2, Check, X } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -13,6 +13,8 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { toast } from "sonner";
 
 const COLUMNS: { key: string; label: string }[] = [
+  { key: "viewer_ideas", label: "Viewer Ideas" },
+  { key: "declined", label: "Declined" },
   { key: "idea", label: "Idea" },
   { key: "maybe", label: "Maybe" },
   { key: "working", label: "Working on it" },
@@ -99,7 +101,7 @@ export function NotesManager() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-3">
         {COLUMNS.map((col) => {
           const colNotes = (notes || []).filter((n: any) => n.status === col.key);
           return (
@@ -125,6 +127,10 @@ export function NotesManager() {
               onMove={(status) => move.mutate({ id: openNote.id, status })}
               onDelete={() => remove.mutate(openNote.id)}
               authorName={authorName(openNote)}
+              onUpdated={() => {
+                qc.invalidateQueries({ queryKey: ["site-notes"] });
+                setOpenNote(null);
+              }}
             />
           )}
         </DialogContent>
@@ -133,10 +139,13 @@ export function NotesManager() {
   );
 }
 
-function NoteDetail({ note, onMove, onDelete, authorName }: { note: any; onMove: (s: string) => void; onDelete: () => void; authorName: string }) {
+function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: any; onMove: (s: string) => void; onDelete: () => void; authorName: string; onUpdated: () => void }) {
   const qc = useQueryClient();
   const { user } = useAuth();
   const [comment, setComment] = useState("");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(note.title);
+  const [editBody, setEditBody] = useState(note.body || "");
 
   const { data: comments } = useQuery({
     queryKey: ["note-comments", note.id],
@@ -162,11 +171,61 @@ function NoteDetail({ note, onMove, onDelete, authorName }: { note: any; onMove:
     onError: (e: any) => toast.error(e.message),
   });
 
+  const updateNote = useMutation({
+    mutationFn: async () => {
+      const { error } = await supabase
+        .from("site_notes")
+        .update({
+          title: editTitle.trim(),
+          body: editBody.trim() || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("id", note.id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Updated");
+      setIsEditing(false);
+      onUpdated();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-4">
-      <DialogHeader><DialogTitle>{note.title}</DialogTitle></DialogHeader>
-      <p className="text-xs text-muted-foreground">by {authorName}</p>
-      {note.body && <p className="text-sm whitespace-pre-wrap">{note.body}</p>}
+      <div className="flex justify-between items-start gap-4">
+        {isEditing ? (
+          <div className="flex-1 space-y-3">
+            <div>
+              <Label>Title</Label>
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            </div>
+            <div>
+              <Label>Details</Label>
+              <Textarea rows={4} value={editBody} onChange={(e) => setEditBody(e.target.value)} />
+            </div>
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => updateNote.mutate()} disabled={updateNote.isPending}>
+                <Check className="h-4 w-4 mr-1" /> Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setIsEditing(false)}>
+                <X className="h-4 w-4 mr-1" /> Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex-1">
+            <DialogHeader><DialogTitle>{note.title}</DialogTitle></DialogHeader>
+            <p className="text-xs text-muted-foreground">by {authorName}</p>
+            {note.body && <p className="text-sm mt-3 whitespace-pre-wrap">{note.body}</p>}
+          </div>
+        )}
+        {!isEditing && (
+          <Button variant="ghost" size="icon" onClick={() => setIsEditing(true)}>
+            <Edit2 className="h-4 w-4" />
+          </Button>
+        )}
+      </div>
 
       <div>
         <Label>Status</Label>
