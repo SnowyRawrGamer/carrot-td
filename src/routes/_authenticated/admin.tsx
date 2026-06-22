@@ -8,6 +8,7 @@ import { UpdatesManager } from "@/components/admin/updates-manager";
 import { EditorsManager } from "@/components/admin/editors-manager";
 import { AuditLog } from "@/components/admin/audit-log";
 import { LoadoutsManager } from "@/components/admin/loadouts-manager";
+import { NotesManager } from "@/components/admin/notes-manager";
 import { Shield } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
