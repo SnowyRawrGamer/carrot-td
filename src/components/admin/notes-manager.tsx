@@ -32,7 +32,6 @@ export function NotesManager() {
   const { data: notes } = useQuery({
     queryKey: ["site-notes"],
     queryFn: async () => {
-      // Attempt to fetch with profiles, but fallback to direct notes if profiles doesn't exist or fails
       try {
         const { data, error } = await supabase
           .from("site_notes")
@@ -40,7 +39,6 @@ export function NotesManager() {
           .order("created_at", { ascending: false });
         
         if (error) {
-          // If the join fails because public_profiles doesn't exist or is inaccessible
           if (error.code === 'PGRST108' || error.message?.includes('public_profiles')) {
             const { data: directData, error: directError } = await supabase
               .from("site_notes")
@@ -68,7 +66,11 @@ export function NotesManager() {
       if (!user) throw new Error("Not signed in");
       if (!newTitle.trim()) throw new Error("Give it a title");
       const { error } = await supabase.from("site_notes").insert({
-        title: newTitle.trim(), body: newBody.trim() || null, created_by: user.id, status: "viewer_ideas",
+        title: newTitle.trim(), 
+        body: newBody.trim() || null, 
+        created_by: user.id, 
+        status: "viewer_ideas",
+        is_feedback: false // Explicitly mark as not feedback
       });
       if (error) throw error;
     },
@@ -132,6 +134,11 @@ export function NotesManager() {
                 <Card key={n.id} className="p-3 cursor-pointer hover:border-primary/40" onClick={() => setOpenNote(n)}>
                   <div className="font-medium text-sm">{n.title}</div>
                   <div className="text-xs text-muted-foreground mt-1">by {authorName(n)}</div>
+                  {n.is_feedback === true && (
+                    <div className="mt-2 text-[10px] font-bold text-primary uppercase tracking-tighter bg-primary/5 px-1.5 py-0.5 rounded inline-block">
+                      User Feedback
+                    </div>
+                  )}
                 </Card>
               ))}
               {colNotes.length === 0 && <p className="text-xs text-muted-foreground">Nothing here.</p>}
@@ -293,46 +300,48 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
         )}
       </div>
 
-      <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
-        <h4 className="text-sm font-bold flex items-center gap-1.5"><Shield className="h-4 w-4" /> Resolve Feedback</h4>
-        <div>
-          <Label className="text-xs">Quick Response (optional)</Label>
-          <Input 
-            placeholder="Feedback response to the user..." 
-            className="h-8 text-sm"
-            value={adminResponse}
-            onChange={(e) => setAdminResponse(e.target.value)}
-          />
+      {note.is_feedback === true && (
+        <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
+          <h4 className="text-sm font-bold flex items-center gap-1.5"><Shield className="h-4 w-4" /> Resolve Feedback</h4>
+          <div>
+            <Label className="text-xs">Quick Response (optional)</Label>
+            <Input 
+              placeholder="Feedback response to the user..." 
+              className="h-8 text-sm"
+              value={adminResponse}
+              onChange={(e) => setAdminResponse(e.target.value)}
+            />
+          </div>
+          <div className="flex gap-2">
+            <Button 
+              size="sm" 
+              className="flex-1 bg-green-600 hover:bg-green-700"
+              onClick={() => resolveFeedback.mutate("accepted")}
+              disabled={resolveFeedback.isPending}
+            >
+              <ThumbsUp className="h-3.5 w-3.5 mr-1" /> Accept
+            </Button>
+            <Button 
+              size="sm" 
+              variant="destructive" 
+              className="flex-1"
+              onClick={() => resolveFeedback.mutate("declined")}
+              disabled={resolveFeedback.isPending}
+            >
+              <ThumbsDown className="h-3.5 w-3.5 mr-1" /> Decline
+            </Button>
+            <Button 
+              size="sm" 
+              variant="secondary" 
+              className="flex-1"
+              onClick={() => resolveFeedback.mutate("maybe")}
+              disabled={resolveFeedback.isPending}
+            >
+              <HelpCircle className="h-3.5 w-3.5 mr-1" /> Maybe
+            </Button>
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Button 
-            size="sm" 
-            className="flex-1 bg-green-600 hover:bg-green-700"
-            onClick={() => resolveFeedback.mutate("accepted")}
-            disabled={resolveFeedback.isPending}
-          >
-            <ThumbsUp className="h-3.5 w-3.5 mr-1" /> Accept
-          </Button>
-          <Button 
-            size="sm" 
-            variant="destructive" 
-            className="flex-1"
-            onClick={() => resolveFeedback.mutate("declined")}
-            disabled={resolveFeedback.isPending}
-          >
-            <ThumbsDown className="h-3.5 w-3.5 mr-1" /> Decline
-          </Button>
-          <Button 
-            size="sm" 
-            variant="secondary" 
-            className="flex-1"
-            onClick={() => resolveFeedback.mutate("maybe")}
-            disabled={resolveFeedback.isPending}
-          >
-            <HelpCircle className="h-3.5 w-3.5 mr-1" /> Maybe
-          </Button>
-        </div>
-      </div>
+      )}
 
       <div>
         <Label>Status</Label>
