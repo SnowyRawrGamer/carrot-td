@@ -1,7 +1,7 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect, useMemo } from "react";
-import { Carrot, ArrowLeft, ChevronUp, ChevronDown, AlertCircle, Clock, CheckCircle2, MessageSquare, X } from "lucide-react";
+import { useState } from "react";
+import { AlertCircle, Clock, CheckCircle2, MessageSquare, X, Edit2, Check } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,9 @@ function FeedbackPage() {
   const qc = useQueryClient();
   const [body, setBody] = useState("");
   const [category, setCategory] = useState("Feedback");
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editBody, setEditBody] = useState("");
+  const [editCategory, setEditCategory] = useState("");
 
   const { data: submissions, isLoading } = useQuery({
     queryKey: ["my-feedback"],
@@ -71,6 +74,34 @@ function FeedbackPage() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const update = useMutation({
+    mutationFn: async ({ id, noteId, body, category }: { id: string, noteId: string, body: string, category: string }) => {
+      const { error: feedbackError } = await (supabase as any)
+        .from("site_feedback")
+        .update({ body, category, updated_at: new Date().toISOString() })
+        .eq("id", id);
+      if (feedbackError) throw feedbackError;
+
+      if (noteId) {
+        const { error: noteError } = await supabase
+          .from("site_notes")
+          .update({
+            title: `${category}: ${body.substring(0, 40)}${body.length > 40 ? '...' : ''}`,
+            body: `User: ${user?.email}\n\n${body}`,
+            updated_at: new Date().toISOString()
+          })
+          .eq("id", noteId);
+        if (noteError) throw noteError;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Feedback updated!");
+      setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["my-feedback"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   if (!user) {
     return (
       <Page>
@@ -86,6 +117,12 @@ function FeedbackPage() {
   }
 
   const pendingCount = submissions?.filter(s => s.status === 'pending').length || 0;
+
+  const startEditing = (sub: any) => {
+    setEditingId(sub.id);
+    setEditBody(sub.body);
+    setEditCategory(sub.category);
+  };
 
   return (
     <Page>
@@ -144,25 +181,71 @@ function FeedbackPage() {
             ) : (
               submissions?.map(sub => (
                 <Card key={sub.id} className="p-4 space-y-3">
-                  <div className="flex justify-between items-start gap-2">
-                    <span className="text-xs font-bold px-2 py-0.5 rounded bg-muted uppercase tracking-wider">{sub.category}</span>
-                    <div className="flex items-center gap-1.5 text-xs font-medium">
-                      {sub.status === 'pending' && <><Clock className="h-3 w-3 text-amber-500" /> Pending</>}
-                      {sub.status === 'accepted' && <><CheckCircle2 className="h-3 w-3 text-green-500" /> Accepted</>}
-                      {sub.status === 'declined' && <><X className="h-3 w-3 text-destructive" /> Declined</>}
-                      {sub.status === 'maybe' && <><Clock className="h-3 w-3 text-blue-500" /> Maybe</>}
-                    </div>
-                  </div>
-                  <p className="text-sm line-clamp-3">{sub.body}</p>
-                  {sub.admin_response && (
-                    <div className="mt-3 p-3 bg-primary/5 border-l-2 border-primary rounded-r-md">
-                      <div className="flex items-center gap-1.5 text-xs font-bold text-primary mb-1">
-                        <MessageSquare className="h-3 w-3" /> ADMIN RESPONSE
+                  {editingId === sub.id ? (
+                    <div className="space-y-3">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-xs uppercase font-bold tracking-wider">Editing Submission</Label>
+                        <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => setEditingId(null)}>
+                          <X className="h-4 w-4" />
+                        </Button>
                       </div>
-                      <p className="text-sm text-primary/90 italic">"{sub.admin_response}"</p>
+                      <Select value={editCategory} onValueChange={setEditCategory}>
+                        <SelectTrigger className="h-8 text-xs"><SelectValue /></SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Bug Report">Bug Report</SelectItem>
+                          <SelectItem value="Feedback">Feedback</SelectItem>
+                          <SelectItem value="Other">Other</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Textarea 
+                        value={editBody} 
+                        onChange={(e) => setEditBody(e.target.value)}
+                        className="text-sm min-h-[100px]"
+                      />
+                      <div className="flex gap-2">
+                        <Button 
+                          size="sm" 
+                          className="flex-1" 
+                          onClick={() => update.mutate({ id: sub.id, noteId: sub.note_id, body: editBody, category: editCategory })}
+                          disabled={update.isPending}
+                        >
+                          <Check className="h-3 w-3 mr-1" /> Save
+                        </Button>
+                        <Button size="sm" variant="outline" className="flex-1" onClick={() => setEditingId(null)}>
+                          Cancel
+                        </Button>
+                      </div>
                     </div>
+                  ) : (
+                    <>
+                      <div className="flex justify-between items-start gap-2">
+                        <div className="flex flex-wrap gap-2">
+                          <span className="text-xs font-bold px-2 py-0.5 rounded bg-muted uppercase tracking-wider">{sub.category}</span>
+                          <div className="flex items-center gap-1.5 text-xs font-medium">
+                            {sub.status === 'pending' && <><Clock className="h-3 w-3 text-amber-500" /> Pending</>}
+                            {sub.status === 'accepted' && <><CheckCircle2 className="h-3 w-3 text-green-500" /> Accepted</>}
+                            {sub.status === 'declined' && <><X className="h-3 w-3 text-destructive" /> Declined</>}
+                            {sub.status === 'maybe' && <><Clock className="h-3 w-3 text-blue-500" /> Maybe</>}
+                          </div>
+                        </div>
+                        {sub.status === 'pending' && (
+                          <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1" onClick={() => startEditing(sub)}>
+                            <Edit2 className="h-3 w-3" />
+                          </Button>
+                        )}
+                      </div>
+                      <p className="text-sm line-clamp-3">{sub.body}</p>
+                      {sub.admin_response && (
+                        <div className="mt-3 p-3 bg-primary/5 border-l-2 border-primary rounded-r-md">
+                          <div className="flex items-center gap-1.5 text-xs font-bold text-primary mb-1">
+                            <MessageSquare className="h-3 w-3" /> ADMIN RESPONSE
+                          </div>
+                          <p className="text-sm text-primary/90 italic">"{sub.admin_response}"</p>
+                        </div>
+                      )}
+                      <p className="text-[10px] text-muted-foreground pt-1">Submitted {new Date(sub.created_at).toLocaleDateString()}</p>
+                    </>
                   )}
-                  <p className="text-[10px] text-muted-foreground pt-1">Submitted {new Date(sub.created_at).toLocaleDateString()}</p>
                 </Card>
               ))
             )}
