@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Card } from "@/components/ui/card";
+import { Switch } from "@/components/ui/switch";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { UnitForm } from "./unit-form";
@@ -158,7 +159,10 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
                 {s[imageField] && <img src={s[imageField]} alt="" className="h-full w-full object-cover" />}
               </div>
               <div className="flex-1 min-w-0">
-                <div className="font-semibold truncate">{s.name}</div>
+                <div className="font-semibold truncate flex items-center gap-1.5">
+                  {s.name}
+                  {isSummon && s.is_custom && <span className="text-[10px] px-1.5 py-0.5 rounded border bg-primary/10 text-primary">Custom</span>}
+                </div>
                 <div className="text-xs text-muted-foreground">/{s.slug}</div>
               </div>
               <Dialog open={editing?.id === s.id} onOpenChange={(o) => setEditing(o ? s : null)}>
@@ -192,7 +196,8 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
     const [slugTouched, setSlugTouched] = useState(!!existing);
     const [image, setImage] = useState(existing?.[imageField] || "");
     const [description, setDescription] = useState(existing?.description || "");
-    const [entries, setEntries] = useState<{ unit_id: string; drop_rate: string }[]>([]);
+    const [isCustom, setIsCustom] = useState(!!existing?.is_custom);
+    const [entries, setEntries] = useState<{ unit_id: string; custom_name: string; custom_image_url: string; drop_rate: string }[]>([]);
     const [loaded, setLoaded] = useState(!existing);
 
     const { data: units } = useQuery({
@@ -207,8 +212,13 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
       queryKey: ["pool-entries", kind, existing?.id],
       enabled: !!existing?.id,
       queryFn: async () => {
-        const { data } = await (supabase.from(entriesTable) as any).select("unit_id, drop_rate").eq(fkCol, existing.id);
-        setEntries((data || []).map((e: any) => ({ unit_id: e.unit_id, drop_rate: String(e.drop_rate) })));
+        const { data } = await (supabase.from(entriesTable) as any).select("unit_id, custom_name, custom_image_url, drop_rate").eq(fkCol, existing.id);
+        setEntries((data || []).map((e: any) => ({
+          unit_id: e.unit_id || "",
+          custom_name: e.custom_name || "",
+          custom_image_url: e.custom_image_url || "",
+          drop_rate: String(e.drop_rate),
+        })));
         setLoaded(true);
         return data;
       },
@@ -221,6 +231,7 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
         if (!name.trim() || !slug.trim()) throw new Error("Name and slug required");
         const payload: any = { name: name.trim(), slug: slug.trim(), description: description.trim() || null };
         payload[imageField] = image.trim() || null;
+        if (isSummon) payload.is_custom = isCustom;
         let id = existing?.id;
         if (id) {
           const { error } = await supabase.from(table).update(payload).eq("id", id);
@@ -231,10 +242,19 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
           if (error) throw error;
           id = data.id;
         }
-        const valid = entries.filter((e) => e.unit_id);
+        const valid = isCustom
+          ? entries.filter((e) => e.custom_name.trim())
+          : entries.filter((e) => e.unit_id);
         if (valid.length) {
           const rows = valid.map((e) => {
-            const r: any = { unit_id: e.unit_id, drop_rate: Number(e.drop_rate) || 0 };
+            const r: any = { drop_rate: Number(e.drop_rate) || 0 };
+            if (isCustom) {
+              r.custom_name = e.custom_name.trim();
+              r.custom_image_url = e.custom_image_url.trim() || null;
+              r.unit_id = null;
+            } else {
+              r.unit_id = e.unit_id;
+            }
             r[fkCol] = id;
             return r;
           });
@@ -267,19 +287,35 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
           <div className="md:col-span-2"><Label>Description</Label><Textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
         </div>
 
+        {isSummon && (
+          <div className="flex items-center gap-2 border-t pt-4">
+            <Switch checked={isCustom} onCheckedChange={(v) => { setIsCustom(v); setEntries([]); }} />
+            <Label>Custom summon (pool entries are custom names/images instead of real units — e.g. "AFK World")</Label>
+          </div>
+        )}
+
         <div>
           <div className="flex items-center justify-between mb-2">
-            <h3 className="font-semibold">Pool ({entries.length} units)</h3>
+            <h3 className="font-semibold">Pool ({entries.length} entries)</h3>
             <span className="text-sm text-muted-foreground">Total: {total.toFixed(2)}%</span>
           </div>
           <div className="space-y-2">
             {entries.map((e, i) => (
               <div key={i} className="flex gap-2 items-center">
-                <select className="flex-1 h-10 rounded-md border bg-background px-3 text-sm" value={e.unit_id}
-                  onChange={(ev) => setEntries(cur => cur.map((x, j) => j === i ? { ...x, unit_id: ev.target.value } : x))}>
-                  <option value="">Select unit...</option>
-                  {(units || []).map((u) => <option key={u.id} value={u.id}>{u.name}{u.rarity ? ` (${u.rarity})` : ""}</option>)}
-                </select>
+                {isCustom ? (
+                  <>
+                    <Input className="flex-1" placeholder="Custom name" value={e.custom_name}
+                      onChange={(ev) => setEntries(cur => cur.map((x, j) => j === i ? { ...x, custom_name: ev.target.value } : x))} />
+                    <Input className="flex-1" placeholder="Custom image URL" value={e.custom_image_url}
+                      onChange={(ev) => setEntries(cur => cur.map((x, j) => j === i ? { ...x, custom_image_url: ev.target.value } : x))} />
+                  </>
+                ) : (
+                  <select className="flex-1 h-10 rounded-md border bg-background px-3 text-sm" value={e.unit_id}
+                    onChange={(ev) => setEntries(cur => cur.map((x, j) => j === i ? { ...x, unit_id: ev.target.value } : x))}>
+                    <option value="">Select unit...</option>
+                    {(units || []).map((u) => <option key={u.id} value={u.id}>{u.name}{u.rarity ? ` (${u.rarity})` : ""}</option>)}
+                  </select>
+                )}
                 <Input type="number" step="0.01" className="w-28" placeholder="Rate %" value={e.drop_rate}
                   onChange={(ev) => setEntries(cur => cur.map((x, j) => j === i ? { ...x, drop_rate: ev.target.value } : x))} />
                 <Button variant="ghost" size="icon" onClick={() => setEntries(cur => cur.filter((_, j) => j !== i))}>
@@ -287,8 +323,8 @@ export function PoolManager({ kind }: { kind: "summons" | "chests" }) {
                 </Button>
               </div>
             ))}
-            <Button variant="outline" size="sm" onClick={() => setEntries(cur => [...cur, { unit_id: "", drop_rate: "" }])}>
-              <Plus className="h-4 w-4 mr-1" /> Add unit to pool
+            <Button variant="outline" size="sm" onClick={() => setEntries(cur => [...cur, { unit_id: "", custom_name: "", custom_image_url: "", drop_rate: "" }])}>
+              <Plus className="h-4 w-4 mr-1" /> Add {isCustom ? "entry" : "unit"} to pool
             </Button>
           </div>
         </div>
