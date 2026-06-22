@@ -1,6 +1,6 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, MessageSquare, Trash2, Edit2, Check, X } from "lucide-react";
+import { Plus, MessageSquare, Trash2, Edit2, Check, X, ThumbsUp, ThumbsDown, HelpCircle, Shield } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { Button } from "@/components/ui/button";
@@ -14,11 +14,11 @@ import { toast } from "sonner";
 
 const COLUMNS: { key: string; label: string }[] = [
   { key: "viewer_ideas", label: "Viewer Ideas" },
-  { key: "declined", label: "Declined" },
+  { key: "declined", label: "Declined Ideas" },
   { key: "idea", label: "Idea" },
   { key: "maybe", label: "Maybe" },
+  { key: "accepted", label: "Accepted Ideas" },
   { key: "working", label: "Working on it" },
-  { key: "almost", label: "Almost completed" },
   { key: "completed", label: "Completed" },
 ];
 
@@ -146,6 +146,7 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(note.title);
   const [editBody, setEditBody] = useState(note.body || "");
+  const [adminResponse, setAdminResponse] = useState("");
 
   const { data: comments } = useQuery({
     queryKey: ["note-comments", note.id],
@@ -191,6 +192,28 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
     onError: (e: any) => toast.error(e.message),
   });
 
+  const resolveFeedback = useMutation({
+    mutationFn: async (resolution: "accepted" | "declined" | "maybe") => {
+      const { error: feedbackError } = await supabase
+        .from("site_feedback")
+        .update({
+          status: resolution,
+          admin_response: adminResponse.trim() || null,
+          updated_at: new Date().toISOString()
+        })
+        .eq("note_id", note.id);
+
+      if (feedbackError) throw feedbackError;
+
+      onMove(resolution);
+    },
+    onSuccess: () => {
+      toast.success("Feedback resolved");
+      onUpdated();
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-start gap-4">
@@ -225,6 +248,47 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
             <Edit2 className="h-4 w-4" />
           </Button>
         )}
+      </div>
+
+      <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
+        <h4 className="text-sm font-bold flex items-center gap-1.5"><Shield className="h-4 w-4" /> Resolve Feedback</h4>
+        <div>
+          <Label className="text-xs">Quick Response (optional)</Label>
+          <Input 
+            placeholder="Feedback response to the user..." 
+            className="h-8 text-sm"
+            value={adminResponse}
+            onChange={(e) => setAdminResponse(e.target.value)}
+          />
+        </div>
+        <div className="flex gap-2">
+          <Button 
+            size="sm" 
+            className="flex-1 bg-green-600 hover:bg-green-700"
+            onClick={() => resolveFeedback.mutate("accepted")}
+            disabled={resolveFeedback.isPending}
+          >
+            <ThumbsUp className="h-3.5 w-3.5 mr-1" /> Accept
+          </Button>
+          <Button 
+            size="sm" 
+            variant="destructive" 
+            className="flex-1"
+            onClick={() => resolveFeedback.mutate("declined")}
+            disabled={resolveFeedback.isPending}
+          >
+            <ThumbsDown className="h-3.5 w-3.5 mr-1" /> Decline
+          </Button>
+          <Button 
+            size="sm" 
+            variant="secondary" 
+            className="flex-1"
+            onClick={() => resolveFeedback.mutate("maybe")}
+            disabled={resolveFeedback.isPending}
+          >
+            <HelpCircle className="h-3.5 w-3.5 mr-1" /> Maybe
+          </Button>
+        </div>
       </div>
 
       <div>
