@@ -11,29 +11,55 @@ export function LoadoutsManager() {
   const qc = useQueryClient();
   const [expanded, setExpanded] = useState<string | null>(null);
 
-  const { data: loadouts } = useQuery({
+  const { data: loadouts, error: queryError } = useQuery({
     queryKey: ["admin-loadouts"],
     queryFn: async () => {
-      const { data, error } = await supabase
+      // Fetch loadouts first. We don't join profiles here to avoid RLS-induced join failures
+      // that might omit rows if the join target isn't readable.
+      const { data: rawLoadouts, error: lError } = await supabase
         .from("community_loadouts")
-        .select("id, title, description, status, created_at, show_real_name, custom_display_name, profiles:creator_id(display_name, email)")
+        .select("id, title, description, status, created_at, show_real_name, custom_display_name, creator_id")
         .order("created_at", { ascending: false });
-      if (error) throw error;
+      
+      if (lError) throw lError;
+      if (!rawLoadouts) return [];
 
-      const ids = (data || []).map((l) => l.id);
-      const { data: units } = ids.length
-        ? await supabase
-            .from("community_loadout_units")
-            .select("loadout_id, slot_index, path_index, level, placement_count, unit:units(name, photo_url, rarity)")
-            .in("loadout_id", ids)
-            .order("slot_index")
-        : { data: [] as any[] };
+      const loadoutIds = rawLoadouts.map((l) => l.id);
+      const creatorIds = Array.from(new Set(rawLoadouts.map((l) => l.creator_id).filter(Boolean)));
+
+      // Fetch units and profiles in parallel
+      const [unitsRes, profilesRes] = await Promise.all([
+        loadoutIds.length 
+          ? supabase
+              .from("community_loadout_units")
+              .select("loadout_id, slot_index, path_index, level, placement_count, unit:units(name, photo_url, rarity)")
+              .in("loadout_id", loadoutIds)
+              .order("slot_index")
+          : Promise.resolve({ data: [] }),
+        creatorIds.length
+          ? supabase
+              .from("profiles")
+              .select("id, display_name, email")
+              .in("id", creatorIds)
+          : Promise.resolve({ data: [] })
+      ]);
+
       const unitsMap: Record<string, any[]> = {};
-      for (const u of units || []) {
+      for (const u of unitsRes.data || []) {
         if (!unitsMap[u.loadout_id]) unitsMap[u.loadout_id] = [];
         unitsMap[u.loadout_id].push(u);
       }
-      return (data || []).map((l) => ({ ...l, units: unitsMap[l.id] || [] }));
+
+      const profilesMap: Record<string, any> = {};
+      for (const p of profilesRes.data || []) {
+        profilesMap[p.id] = p;
+      }
+
+      return rawLoadouts.map((l) => ({ 
+        ...l, 
+        units: unitsMap[l.id] || [],
+        profiles: profilesMap[l.creator_id] || null
+      }));
     },
   });
 
@@ -54,6 +80,15 @@ export function LoadoutsManager() {
     onSuccess: () => { toast.success("Deleted"); qc.invalidateQueries({ queryKey: ["admin-loadouts"] }); },
     onError: (e: any) => toast.error(e.message),
   });
+
+  if (queryError) {
+    return (
+      <div className="p-4 border border-destructive/50 bg-destructive/5 rounded-lg text-destructive">
+        <p className="font-bold">Error loading loadouts:</p>
+        <p className="text-sm">{(queryError as any).message}</p>
+      </div>
+    );
+  }
 
   const pending = (loadouts || []).filter((l) => l.status === "pending");
   const approved = (loadouts || []).filter((l) => l.status === "approved");
