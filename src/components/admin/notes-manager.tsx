@@ -15,7 +15,6 @@ import { toast } from "sonner";
 const COLUMNS: { key: string; label: string }[] = [
   { key: "viewer_ideas", label: "Viewer Ideas" },
   { key: "declined", label: "Declined Ideas" },
-  { key: "idea", label: "Idea" },
   { key: "maybe", label: "Maybe" },
   { key: "accepted", label: "Accepted Ideas" },
   { key: "working", label: "Working on it" },
@@ -47,7 +46,7 @@ export function NotesManager() {
       if (!user) throw new Error("Not signed in");
       if (!newTitle.trim()) throw new Error("Give it a title");
       const { error } = await supabase.from("site_notes").insert({
-        title: newTitle.trim(), body: newBody.trim() || null, created_by: user.id, status: "idea",
+        title: newTitle.trim(), body: newBody.trim() || null, created_by: user.id, status: "viewer_ideas",
       });
       if (error) throw error;
     },
@@ -101,7 +100,7 @@ export function NotesManager() {
         </Dialog>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-4 lg:grid-cols-7 gap-3">
+      <div className="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3">
         {COLUMNS.map((col) => {
           const colNotes = (notes || []).filter((n: any) => n.status === col.key);
           return (
