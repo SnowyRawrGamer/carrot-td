@@ -32,12 +32,34 @@ export function NotesManager() {
   const { data: notes } = useQuery({
     queryKey: ["site-notes"],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("site_notes")
-        .select("*, author:public_profiles!created_by(display_name, public_name)")
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return data;
+      // Attempt to fetch with profiles, but fallback to direct notes if profiles doesn't exist or fails
+      try {
+        const { data, error } = await supabase
+          .from("site_notes")
+          .select("*, author:public_profiles!created_by(display_name, public_name)")
+          .order("created_at", { ascending: false });
+        
+        if (error) {
+          // If the join fails because public_profiles doesn't exist or is inaccessible
+          if (error.code === 'PGRST108' || error.message?.includes('public_profiles')) {
+            const { data: directData, error: directError } = await supabase
+              .from("site_notes")
+              .select("*")
+              .order("created_at", { ascending: false });
+            if (directError) throw directError;
+            return directData;
+          }
+          throw error;
+        }
+        return data;
+      } catch (e) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("site_notes")
+          .select("*")
+          .order("created_at", { ascending: false });
+        if (fallbackError) throw fallbackError;
+        return fallbackData;
+      }
     },
   });
 
@@ -77,7 +99,7 @@ export function NotesManager() {
   });
 
   function authorName(n: any) {
-    return n.author?.public_name || n.author?.display_name || "Unknown";
+    return n.author?.public_name || n.author?.display_name || "User";
   }
 
   return (
@@ -150,13 +172,35 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
   const { data: comments } = useQuery({
     queryKey: ["note-comments", note.id],
     queryFn: async () => {
-      const { data, error } = await supabase
-        .from("site_note_comments")
-        .select("*, author:public_profiles!author_id(display_name, public_name)")
-        .eq("note_id", note.id)
-        .order("created_at");
-      if (error) throw error;
-      return data;
+      try {
+        const { data, error } = await supabase
+          .from("site_note_comments")
+          .select("*, author:public_profiles!author_id(display_name, public_name)")
+          .eq("note_id", note.id)
+          .order("created_at");
+        
+        if (error) {
+          if (error.code === 'PGRST108' || error.message?.includes('public_profiles')) {
+            const { data: directData, error: directError } = await supabase
+              .from("site_note_comments")
+              .select("*")
+              .eq("note_id", note.id)
+              .order("created_at");
+            if (directError) throw directError;
+            return directData;
+          }
+          throw error;
+        }
+        return data;
+      } catch (e) {
+        const { data: fallbackData, error: fallbackError } = await supabase
+          .from("site_note_comments")
+          .select("*")
+          .eq("note_id", note.id)
+          .order("created_at");
+        if (fallbackError) throw fallbackError;
+        return fallbackData;
+      }
     },
   });
 
@@ -304,7 +348,7 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
         <h4 className="text-sm font-semibold flex items-center gap-1"><MessageSquare className="h-4 w-4" /> Comments ({comments?.length || 0})</h4>
         {(comments || []).map((c: any) => (
           <div key={c.id} className="text-sm bg-muted/40 rounded p-2">
-            <span className="font-medium">{c.author?.public_name || c.author?.display_name || "Unknown"}:</span> {c.body}
+            <span className="font-medium">{c.author?.public_name || c.author?.display_name || "User"}:</span> {c.body}
           </div>
         ))}
         <div className="flex gap-2">
