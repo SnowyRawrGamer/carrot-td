@@ -1,200 +1,199 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Sparkles, Carrot } from "lucide-react";
 import { useState } from "react";
-import { Page } from "@/components/layout/page";
-import { Card } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Plus, MessageSquare, Trash2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { rarityClass } from "@/lib/utils-slug";
+import { useAuth } from "@/lib/auth";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { toast } from "sonner";
 
-export const Route = createFileRoute("/summons/$slug")({
-  component: SummonDetail,
-});
+const COLUMNS: { key: string; label: string }[] = [
+  { key: "idea", label: "Idea" },
+  { key: "maybe", label: "Maybe" },
+  { key: "working", label: "Working on it" },
+  { key: "almost", label: "Almost completed" },
+  { key: "completed", label: "Completed" },
+];
 
-function weightedRoll(entries: any[]) {
-  const total = entries.reduce((s, e) => s + Number(e.drop_rate || 0), 0);
-  let roll = Math.random() * total;
-  for (const e of entries) {
-    roll -= Number(e.drop_rate || 0);
-    if (roll <= 0) {
-      return e.unit ? e.unit : { name: e.custom_name, photo_url: e.custom_image_url, rarity: null, slug: null };
-    }
-  }
-  const last = entries[entries.length - 1];
-  if (!last) return null;
-  return last.unit ? last.unit : { name: last.custom_name, photo_url: last.custom_image_url, rarity: null, slug: null };
-}
+export function NotesManager() {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const [creating, setCreating] = useState(false);
+  const [newTitle, setNewTitle] = useState("");
+  const [newBody, setNewBody] = useState("");
+  const [openNote, setOpenNote] = useState<any | null>(null);
 
-function fmtDate(d?: string | null) {
-  return d ? new Date(d + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : null;
-}
-
-function SummonDetail() {
-  const { slug } = Route.useParams();
-  const [results, setResults] = useState<any[] | null>(null);
-
-  const { data, isLoading } = useQuery({
-    queryKey: ["summon", slug],
+  const { data: notes } = useQuery({
+    queryKey: ["site-notes"],
     queryFn: async () => {
-      const { data: summon, error } = await supabase.from("summons").select("*").eq("slug", slug).maybeSingle();
+      const { data, error } = await supabase
+        .from("site_notes")
+        .select("*, author:profiles!created_by(display_name, public_name)")
+        .order("created_at", { ascending: false });
       if (error) throw error;
-      if (!summon) return null;
-      const { data: entries } = await supabase
-        .from("summon_entries")
-        .select("drop_rate, custom_name, custom_image_url, unit:units(id, slug, name, photo_url, rarity, tier)")
-        .eq("summon_id", summon.id);
-
-      const { data: updateLinks } = await supabase
-        .from("update_summons")
-        .select("update:updates(id, slug, name, released_at)")
-        .eq("summon_id", summon.id);
-      const addedIn = (updateLinks || [])
-        .map((r: any) => r.update)
-        .filter(Boolean)
-        .sort((a: any, b: any) => (a.released_at || "").localeCompare(b.released_at || ""))[0] || null;
-
-      let removedIn = null;
-      if (summon.removed_update_id) {
-        const { data: ru } = await supabase.from("updates").select("id, slug, name, released_at").eq("id", summon.removed_update_id).maybeSingle();
-        removedIn = ru;
-      }
-
-      return { summon, entries: (entries || []) as any[], addedIn, removedIn };
+      return data;
     },
   });
 
-  if (isLoading) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
-  if (!data) return <Page><Card className="p-8 text-center">Summon not found.</Card></Page>;
-  const { summon, entries, addedIn, removedIn } = data;
-  const total = entries.reduce((s, e) => s + Number(e.drop_rate || 0), 0);
-  const sorted = [...entries].sort((a, b) => Number(b.drop_rate) - Number(a.drop_rate));
-  const canSimulate = entries.length > 0;
-  const addedDate = fmtDate(addedIn?.released_at);
-  const removedDate = fmtDate(removedIn?.released_at);
+  const create = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not signed in");
+      if (!newTitle.trim()) throw new Error("Give it a title");
+      const { error } = await supabase.from("site_notes").insert({
+        title: newTitle.trim(), body: newBody.trim() || null, created_by: user.id, status: "idea",
+      });
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Posted");
+      setCreating(false); setNewTitle(""); setNewBody("");
+      qc.invalidateQueries({ queryKey: ["site-notes"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
 
-  function rollOne() { setResults([weightedRoll(entries)]); }
-  function rollTen() { setResults(Array.from({ length: 10 }, () => weightedRoll(entries))); }
+  const move = useMutation({
+    mutationFn: async ({ id, status }: { id: string; status: string }) => {
+      const { error } = await supabase.from("site_notes").update({ status, updated_at: new Date().toISOString() }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["site-notes"] }),
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("site_notes").delete().eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("Deleted"); setOpenNote(null); qc.invalidateQueries({ queryKey: ["site-notes"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  function authorName(n: any) {
+    return n.author?.public_name || n.author?.display_name || "Unknown";
+  }
 
   return (
-    <Page>
-      <Link to="/summons" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
-        <ArrowLeft className="h-4 w-4 mr-1" /> All summons
-      </Link>
-
-      {(addedIn || removedIn) && (
-        <Card className="p-3 mb-4 bg-primary/5 border-primary/30 text-sm space-y-1">
-          {addedIn && (
-            <p>
-              Added in{" "}
-              <Link to="/updates/$slug" params={{ slug: addedIn.slug }} className="font-semibold text-primary hover:underline">{addedIn.name}</Link>
-              {addedDate ? ` (${addedDate})` : ""}
-              {removedIn && " and"}
-              {removedIn && (
-                <>
-                  {" "}removed in{" "}
-                  <Link to="/updates/$slug" params={{ slug: removedIn.slug }} className="font-semibold text-primary hover:underline">{removedIn.name}</Link>
-                  {removedDate ? ` (${removedDate})` : ""}
-                </>
-              )}.
-            </p>
-          )}
-          {!addedIn && removedIn && (
-            <p>
-              Removed in{" "}
-              <Link to="/updates/$slug" params={{ slug: removedIn.slug }} className="font-semibold text-primary hover:underline">{removedIn.name}</Link>
-              {removedDate ? ` (${removedDate})` : ""}.
-            </p>
-          )}
-        </Card>
-      )}
-
-      <Card className="overflow-hidden p-0 mb-6">
-        <div className="aspect-[21/9] bg-muted">
-          {summon.banner_url ? <img src={summon.banner_url} alt={summon.name} className="h-full w-full object-contain" /> :
-            <div className="h-full w-full grid place-items-center text-muted-foreground"><Sparkles className="h-12 w-12" /></div>}
+    <div>
+      <div className="flex justify-between items-center mb-4">
+        <div>
+          <h2 className="text-xl font-bold">Notes & Ideas</h2>
+          <p className="text-sm text-muted-foreground">Internal board — visible to editors and owners only.</p>
         </div>
-        <div className="p-5">
-          <div className="flex items-center gap-2">
-            <h1 className="text-2xl font-bold">{summon.name}</h1>
-            {summon.is_custom && <span className="text-xs px-2 py-0.5 rounded border bg-primary/10 text-primary">Custom</span>}
-            {removedIn && <span className="text-xs px-2 py-0.5 rounded border bg-destructive/10 text-destructive border-destructive/30">Removed</span>}
-          </div>
-          {summon.description && <p className="text-muted-foreground mt-1">{summon.description}</p>}
-        </div>
-      </Card>
-
-      {canSimulate && (
-        <Card className="p-5 mb-6">
-          <h2 className="font-semibold mb-3">Simulate Summon</h2>
-          <div className="flex gap-2 mb-4">
-            <Button onClick={rollOne}>Single Pull</Button>
-            <Button variant="outline" onClick={rollTen}>10 Pull</Button>
-            {results && <Button variant="ghost" onClick={() => setResults(null)}>Clear</Button>}
-          </div>
-          {results && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
-              {results.map((unit, i) => {
-                if (!unit) return null;
-                const entry = entries.find((e) => (e.unit?.id && e.unit.id === unit.id) || (e.custom_name && e.custom_name === unit.name));
-                const card = (
-                  <div className="rounded-lg border bg-muted/30 p-2 text-center hover:border-primary/40 transition">
-                    <div className="h-16 w-full rounded-md bg-muted overflow-hidden mb-2">
-                      {unit.photo_url
-                        ? <img src={unit.photo_url} alt="" className="h-full w-full object-contain" />
-                        : <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-6 w-6" /></div>}
-                    </div>
-                    <div className="text-xs font-medium truncate">{unit.name}</div>
-                    {unit.rarity && <span className={`text-[10px] px-1 py-0.5 rounded border ${rarityClass(unit.rarity)}`}>{unit.rarity}</span>}
-                    {entry && <div className="text-[10px] text-muted-foreground mt-0.5">{Number(entry.drop_rate).toFixed(2)}%</div>}
-                  </div>
-                );
-                return unit.slug ? (
-                  <Link key={i} to="/units/$slug" params={{ slug: unit.slug }}>{card}</Link>
-                ) : (
-                  <div key={i}>{card}</div>
-                );
-              })}
+        <Dialog open={creating} onOpenChange={setCreating}>
+          <DialogTrigger asChild><Button><Plus className="h-4 w-4 mr-1" /> New post</Button></DialogTrigger>
+          <DialogContent>
+            <DialogHeader><DialogTitle>New idea</DialogTitle></DialogHeader>
+            <div className="space-y-3">
+              <div><Label>Title</Label><Input value={newTitle} onChange={(e) => setNewTitle(e.target.value)} /></div>
+              <div><Label>Details</Label><Textarea rows={4} value={newBody} onChange={(e) => setNewBody(e.target.value)} /></div>
+              <Button onClick={() => create.mutate()} disabled={create.isPending}>Post</Button>
             </div>
-          )}
-        </Card>
-      )}
+          </DialogContent>
+        </Dialog>
+      </div>
 
-      <Card className="p-5">
-        <div className="flex items-baseline justify-between mb-3">
-          <h2 className="font-semibold">Pool ({entries.length} {summon.is_custom ? "entries" : "units"})</h2>
-          <span className="text-sm text-muted-foreground">Total: {total.toFixed(2)}%</span>
-        </div>
-        {entries.length === 0 ? (
-          <p className="text-sm text-muted-foreground">Nothing in this pool yet.</p>
-        ) : (
-          <div className="divide-y">
-            {sorted.map((e, i) => {
-              const name = e.unit?.name || e.custom_name;
-              const photo = e.unit?.photo_url || e.custom_image_url;
-              if (!name) return null;
-              const row = (
-                <div className="flex items-center gap-3 py-3 hover:bg-accent/50 -mx-2 px-2 rounded">
-                  <div className="h-12 w-12 rounded-md bg-muted overflow-hidden shrink-0">
-                    {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> :
-                      <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-5 w-5" /></div>}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <div className="font-medium truncate">{name}</div>
-                    {e.unit?.rarity && <span className={`text-[10px] px-1.5 py-0.5 rounded border ${rarityClass(e.unit.rarity)}`}>{e.unit.rarity}</span>}
-                  </div>
-                  <div className="font-semibold tabular-nums">{Number(e.drop_rate).toFixed(2)}%</div>
-                </div>
-              );
-              return e.unit ? (
-                <Link key={i} to="/units/$slug" params={{ slug: e.unit.slug }}>{row}</Link>
-              ) : (
-                <div key={i}>{row}</div>
-              );
-            })}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-3">
+        {COLUMNS.map((col) => {
+          const colNotes = (notes || []).filter((n: any) => n.status === col.key);
+          return (
+            <div key={col.key} className="space-y-2">
+              <h3 className="font-semibold text-sm text-muted-foreground">{col.label} ({colNotes.length})</h3>
+              {colNotes.map((n: any) => (
+                <Card key={n.id} className="p-3 cursor-pointer hover:border-primary/40" onClick={() => setOpenNote(n)}>
+                  <div className="font-medium text-sm">{n.title}</div>
+                  <div className="text-xs text-muted-foreground mt-1">by {authorName(n)}</div>
+                </Card>
+              ))}
+              {colNotes.length === 0 && <p className="text-xs text-muted-foreground">Nothing here.</p>}
+            </div>
+          );
+        })}
+      </div>
+
+      <Dialog open={!!openNote} onOpenChange={(o) => !o && setOpenNote(null)}>
+        <DialogContent className="max-w-lg max-h-[85vh] overflow-y-auto">
+          {openNote && (
+            <NoteDetail
+              note={openNote}
+              onMove={(status) => move.mutate({ id: openNote.id, status })}
+              onDelete={() => remove.mutate(openNote.id)}
+              authorName={authorName(openNote)}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}
+
+function NoteDetail({ note, onMove, onDelete, authorName }: { note: any; onMove: (s: string) => void; onDelete: () => void; authorName: string }) {
+  const qc = useQueryClient();
+  const { user } = useAuth();
+  const [comment, setComment] = useState("");
+
+  const { data: comments } = useQuery({
+    queryKey: ["note-comments", note.id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("site_note_comments")
+        .select("*, author:profiles!author_id(display_name, public_name)")
+        .eq("note_id", note.id)
+        .order("created_at");
+      if (error) throw error;
+      return data;
+    },
+  });
+
+  const postComment = useMutation({
+    mutationFn: async () => {
+      if (!user) throw new Error("Not signed in");
+      if (!comment.trim()) return;
+      const { error } = await supabase.from("site_note_comments").insert({ note_id: note.id, author_id: user.id, body: comment.trim() });
+      if (error) throw error;
+    },
+    onSuccess: () => { setComment(""); qc.invalidateQueries({ queryKey: ["note-comments", note.id] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  return (
+    <div className="space-y-4">
+      <DialogHeader><DialogTitle>{note.title}</DialogTitle></DialogHeader>
+      <p className="text-xs text-muted-foreground">by {authorName}</p>
+      {note.body && <p className="text-sm whitespace-pre-wrap">{note.body}</p>}
+
+      <div>
+        <Label>Status</Label>
+        <Select value={note.status} onValueChange={onMove}>
+          <SelectTrigger><SelectValue /></SelectTrigger>
+          <SelectContent>
+            {COLUMNS.map((c) => <SelectItem key={c.key} value={c.key}>{c.label}</SelectItem>)}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div className="border-t pt-3 space-y-2">
+        <h4 className="text-sm font-semibold flex items-center gap-1"><MessageSquare className="h-4 w-4" /> Comments ({comments?.length || 0})</h4>
+        {(comments || []).map((c: any) => (
+          <div key={c.id} className="text-sm bg-muted/40 rounded p-2">
+            <span className="font-medium">{c.author?.public_name || c.author?.display_name || "Unknown"}:</span> {c.body}
           </div>
-        )}
-      </Card>
-    </Page>
+        ))}
+        <div className="flex gap-2">
+          <Input placeholder="Add a comment..." value={comment} onChange={(e) => setComment(e.target.value)} />
+          <Button size="sm" onClick={() => postComment.mutate()}>Send</Button>
+        </div>
+      </div>
+
+      <div className="flex justify-end border-t pt-3">
+        <Button variant="destructive" size="sm" onClick={onDelete}><Trash2 className="h-4 w-4 mr-1" /> Delete post</Button>
+      </div>
+    </div>
   );
 }
