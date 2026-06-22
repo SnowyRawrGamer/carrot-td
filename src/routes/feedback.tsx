@@ -26,12 +26,12 @@ function FeedbackPage() {
     queryKey: ["my-feedback"],
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
+      const { data, error } = await (supabase as any)
         .from("site_feedback")
         .select("*")
         .order("created_at", { ascending: false });
       if (error) throw error;
-      return data;
+      return data as any[];
     },
     enabled: !!user,
   });
