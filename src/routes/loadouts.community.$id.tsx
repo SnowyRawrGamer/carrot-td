@@ -21,11 +21,11 @@ function CommunityLoadoutDetail() {
   const [overrides, setOverrides] = useState<Record<string, { pathIndex: number | null; level: number }>>({});
   const [resolvedMap, setResolvedMap] = useState<Record<string, ResolvedUnit>>({});
   const [unitMeta, setUnitMeta] = useState<Record<string, { unit: any; paths: any[]; levels: any[] }>>({});
+  const [isInitializing, setIsInitializing] = useState(true);
 
   const { data, isLoading, error: queryError } = useQuery({
     queryKey: ["community-loadout", id],
     queryFn: async () => {
-      // Use maybeSingle instead of single to prevent crashing if not found or RLS-blocked
       const { data: loadout, error } = await supabase
         .from("public_loadouts")
         .select("id, title, description, display_name")
@@ -54,22 +54,42 @@ function CommunityLoadoutDetail() {
   });
 
   useEffect(() => {
-    if (!data) return;
+    if (!data) {
+      if (!isLoading) setIsInitializing(false);
+      return;
+    }
+    
     (async () => {
-      const meta: Record<string, any> = {};
-      const initOverrides: Record<string, { pathIndex: number | null; level: number }> = {};
-      const resolved: Record<string, ResolvedUnit> = {};
-      for (const link of data.links) {
-        const { unit, paths, levels } = await fetchUnitWithUpgrades(link.unit_id);
-        meta[link.unit_id] = { unit, paths, levels };
-        initOverrides[link.unit_id] = { pathIndex: link.path_index, level: link.level };
-        resolved[link.unit_id] = resolveUnitStats(unit, paths, levels, { pathIndex: link.path_index, level: link.level });
+      setIsInitializing(true);
+      try {
+        const meta: Record<string, any> = {};
+        const initOverrides: Record<string, { pathIndex: number | null; level: number }> = {};
+        const resolved: Record<string, ResolvedUnit> = {};
+        
+        for (const link of data.links) {
+          try {
+            const { unit, paths, levels } = await fetchUnitWithUpgrades(link.unit_id);
+            if (!unit) continue;
+            
+            meta[link.unit_id] = { unit, paths, levels };
+            initOverrides[link.unit_id] = { pathIndex: link.path_index, level: link.level };
+            resolved[link.unit_id] = resolveUnitStats(unit, paths, levels, { pathIndex: link.path_index, level: link.level });
+          } catch (err) {
+            console.error(`Failed to fetch unit ${link.unit_id}:`, err);
+          }
+        }
+        
+        setUnitMeta(meta);
+        setOverrides(initOverrides);
+        setResolvedMap(resolved);
+      } catch (err) {
+        console.error("Critical error in loadout initialization:", err);
+        toast.error("Failed to load some units in this loadout.");
+      } finally {
+        setIsInitializing(false);
       }
-      setUnitMeta(meta);
-      setOverrides(initOverrides);
-      setResolvedMap(resolved);
     })();
-  }, [data]);
+  }, [data, isLoading]);
 
   function updateSelection(unitId: string, pathIndex: number | null, level: number) {
     const meta = unitMeta[unitId];
@@ -91,7 +111,7 @@ function CommunityLoadoutDetail() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (isLoading) return <Page><div className="text-muted-foreground">Loading loadout...</div></Page>;
+  if (isLoading || isInitializing) return <Page><div className="text-muted-foreground">Loading loadout...</div></Page>;
 
   if (queryError || !data) {
     return (
@@ -144,6 +164,8 @@ function CommunityLoadoutDetail() {
 
       <div className="space-y-3 mb-6">
         {Object.entries(unitMeta).map(([unitId, meta]) => {
+          if (!meta?.unit) return null;
+          
           const sel = overrides[unitId] || { pathIndex: null, level: 0 };
           const resolved = resolvedMap[unitId];
           return (
