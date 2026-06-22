@@ -1,7 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { AlertCircle, Clock, CheckCircle2, MessageSquare, X, Edit2, Check } from "lucide-react";
+import { AlertCircle, Clock, CheckCircle2, MessageSquare, X, Edit2, Check, Trash2 } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -26,12 +26,13 @@ function FeedbackPage() {
   const [editCategory, setEditCategory] = useState("");
 
   const { data: submissions, isLoading } = useQuery({
-    queryKey: ["my-feedback"],
+    queryKey: ["my-feedback", user?.id],
     queryFn: async () => {
       if (!user) return [];
       const { data, error } = await (supabase as any)
         .from("site_feedback")
         .select("*")
+        .eq("user_id", user.id)
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data as any[];
@@ -97,6 +98,29 @@ function FeedbackPage() {
     onSuccess: () => {
       toast.success("Feedback updated!");
       setEditingId(null);
+      qc.invalidateQueries({ queryKey: ["my-feedback"] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const remove = useMutation({
+    mutationFn: async ({ id, noteId }: { id: string, noteId: string }) => {
+      const { error: feedbackError } = await (supabase as any)
+        .from("site_feedback")
+        .delete()
+        .eq("id", id);
+      if (feedbackError) throw feedbackError;
+
+      if (noteId) {
+        const { error: noteError } = await supabase
+          .from("site_notes")
+          .delete()
+          .eq("id", noteId);
+        if (noteError) throw noteError;
+      }
+    },
+    onSuccess: () => {
+      toast.success("Feedback deleted");
       qc.invalidateQueries({ queryKey: ["my-feedback"] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -229,9 +253,23 @@ function FeedbackPage() {
                           </div>
                         </div>
                         {sub.status === 'pending' && (
-                          <Button variant="ghost" size="icon" className="h-6 w-6 -mt-1" onClick={() => startEditing(sub)}>
-                            <Edit2 className="h-3 w-3" />
-                          </Button>
+                          <div className="flex gap-1 -mt-1">
+                            <Button variant="ghost" size="icon" className="h-6 w-6" onClick={() => startEditing(sub)}>
+                              <Edit2 className="h-3 w-3" />
+                            </Button>
+                            <Button 
+                              variant="ghost" 
+                              size="icon" 
+                              className="h-6 w-6 text-destructive hover:text-destructive hover:bg-destructive/10" 
+                              onClick={() => {
+                                if (confirm("Delete this submission?")) {
+                                  remove.mutate({ id: sub.id, noteId: sub.note_id });
+                                }
+                              }}
+                            >
+                              <Trash2 className="h-3 w-3" />
+                            </Button>
+                          </div>
                         )}
                       </div>
                       <p className="text-sm line-clamp-3">{sub.body}</p>
