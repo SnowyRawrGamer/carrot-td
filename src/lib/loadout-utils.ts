@@ -95,7 +95,7 @@ export function levelBreakdown(unit: any, paths: any[], levels: any[], pathIndex
 }
 
 export interface SlotForTotals { resolved: ResolvedUnit; placementCount: number; }
-eexport interface LoadoutTotals {
+export interface LoadoutTotals {
   totalDamage: number;
   totalCost: number;
   totalPlacement: number;
