@@ -54,7 +54,7 @@ function FeedbackPage() {
 
       if (noteError) throw noteError;
 
-      const { error: feedbackError } = await supabase.from("site_feedback").insert({
+      const { error: feedbackError } = await (supabase as any).from("site_feedback").insert({
         user_id: user.id,
         body: body.trim(),
         category,
