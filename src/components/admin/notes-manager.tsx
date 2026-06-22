@@ -193,7 +193,7 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
 
   const resolveFeedback = useMutation({
     mutationFn: async (resolution: "accepted" | "declined" | "maybe") => {
-      const { error: feedbackError } = await supabase
+      const { error: feedbackError } = await (supabase as any)
         .from("site_feedback")
         .update({
           status: resolution,

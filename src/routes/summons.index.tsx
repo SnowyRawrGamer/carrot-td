@@ -37,7 +37,7 @@ function SummonsPage() {
         if (!existing || (l.update?.released_at || "") < (existing.released_at || "")) addedMap[l.summon_id] = l.update;
       }
 
-      const removedUpdateIds = Array.from(new Set(list.map((s) => s.removed_update_id).filter(Boolean)));
+      const removedUpdateIds = Array.from(new Set(list.map((s) => s.removed_update_id).filter((x): x is string => !!x)));
       const { data: removedUpdates } = removedUpdateIds.length
         ? await supabase.from("updates").select("id, name, slug, released_at").in("id", removedUpdateIds)
         : { data: [] as any[] };
