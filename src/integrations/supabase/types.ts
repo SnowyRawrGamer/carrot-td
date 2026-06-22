@@ -316,6 +316,50 @@ export type Database = {
         }
         Relationships: []
       }
+      site_feedback: {
+        Row: {
+          admin_response: string | null
+          body: string
+          category: string
+          created_at: string
+          id: string
+          note_id: string | null
+          status: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          admin_response?: string | null
+          body: string
+          category: string
+          created_at?: string
+          id?: string
+          note_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          admin_response?: string | null
+          body?: string
+          category?: string
+          created_at?: string
+          id?: string
+          note_id?: string | null
+          status?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "site_feedback_note_id_fkey"
+            columns: ["note_id"]
+            isOneToOne: false
+            referencedRelation: "site_notes"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       site_note_comments: {
         Row: {
           author_id: string
