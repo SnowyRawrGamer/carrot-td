@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { Carrot, ArrowLeft, ChevronUp, ChevronDown, AlertCircle } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
@@ -37,7 +37,7 @@ function CommunityLoadoutDetail() {
 
       const { data: links } = await supabase
         .from("community_loadout_units")
-        .select("unit_id, path_index, level, slot_index")
+        .select("unit_id, path_index, level, slot_index, placement_count")
         .eq("loadout_id", id)
         .order("slot_index");
 
@@ -111,6 +111,16 @@ function CommunityLoadoutDetail() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const totals = useMemo(() => {
+    if (!data) return { totalDamage: 0, totalCost: 0, totalPlacement: 0, overPlacementLimit: false, missingPlacementUnits: [] };
+    const slots = data.links.map(link => {
+      const resolved = resolvedMap[link.unit_id];
+      if (!resolved) return null;
+      return { resolved, placementCount: link.placement_count || 1 };
+    }).filter((s): s is { resolved: ResolvedUnit; placementCount: number } => s !== null);
+    return computeLoadoutTotals(slots);
+  }, [data, resolvedMap]);
+
   if (isLoading || isInitializing) return <Page><div className="text-muted-foreground">Loading loadout...</div></Page>;
 
   if (queryError || !data) {
@@ -136,8 +146,6 @@ function CommunityLoadoutDetail() {
   }
 
   const { loadout, score, myVote } = data;
-  const resolvedList = Object.values(resolvedMap);
-  const totals = computeLoadoutTotals(resolvedList as any);
 
   return (
     <Page>
