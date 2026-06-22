@@ -10,6 +10,7 @@ const navItems = [
   { to: "/chests", label: "Chests" },
   { to: "/updates", label: "Updates" },
   { to: "/loadouts", label: "Loadouts" },
+  { to: "/feedback", label: "Feedback" },
 ];
 
 export function SiteHeader() {
