@@ -331,16 +331,19 @@ function FeedbackPage() {
                             </Button>
                           </div>
                           <div ref={scrollRef} className="max-h-[300px] overflow-y-auto p-3 space-y-3">
-                            {messages?.map((m: any) => (
-                              <div key={m.id} className={`flex flex-col ${m.author_id === user.id ? 'items-end' : 'items-start'}`}>
-                                <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${m.author_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
-                                  <p>{m.body}</p>
+                            {messages?.map((m: any) => {
+                              const authorName = m.author?.public_name || m.author?.display_name || "User";
+                              return (
+                                <div key={m.id} className={`flex flex-col ${m.author_id === user.id ? 'items-end' : 'items-start'}`}>
+                                  <div className={`max-w-[85%] rounded-lg px-3 py-2 text-sm ${m.author_id === user.id ? 'bg-primary text-primary-foreground' : 'bg-muted'}`}>
+                                    <p>{m.body}</p>
+                                  </div>
+                                  <span className="text-[10px] text-muted-foreground mt-1">
+                                    {authorName} • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                  </span>
                                 </div>
-                                <span className="text-[10px] text-muted-foreground mt-1">
-                                  {m.author?.public_name || m.author?.display_name || "User"} • {new Date(m.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                </span>
-                              </div>
-                            ))}
+                              );
+                            })}
                             {(!messages || messages.length === 0) && (
                               <p className="text-center text-xs text-muted-foreground py-4 italic">No messages yet.</p>
                             )}

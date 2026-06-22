@@ -206,7 +206,6 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
   const [editTitle, setEditTitle] = useState(note.title);
   const [editBody, setEditBody] = useState(note.body || "");
   const [adminResponse, setAdminResponse] = useState("");
-  const [allowResponse, setAllowResponse] = useState(false);
 
   const { data: feedback } = useQuery({
     queryKey: ["linked-feedback", note.id],
@@ -320,7 +319,6 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
 
       if (feedbackError) throw feedbackError;
 
-      // If there's an admin response, post it as a comment too for the conversation view
       if (adminResponse.trim()) {
         await supabase.from("site_note_comments").insert({
           note_id: note.id,
@@ -439,15 +437,18 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
       <div className="border-t pt-3 space-y-2">
         <h4 className="text-sm font-semibold flex items-center gap-1"><MessageSquare className="h-4 w-4" /> Conversation ({comments?.length || 0})</h4>
         <div className="max-h-[200px] overflow-y-auto space-y-2 pr-1">
-          {(comments || []).map((c: any) => (
-            <div key={c.id} className={`text-sm rounded p-2 ${c.author_id === user?.id ? 'bg-primary/5 border-l-2 border-primary ml-4' : 'bg-muted/40 mr-4'}`}>
-              <div className="flex justify-between items-center mb-1">
-                <span className="font-bold text-[10px] uppercase tracking-wider">{c.author?.public_name || c.author?.display_name || "User"}</span>
-                <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
-              </div>
-              {c.body}
-            </div>
-          ))}
+          {(comments || []).map((c: any) => {
+             const senderName = c.author?.public_name || c.author?.display_name || "User";
+             return (
+               <div key={c.id} className={`text-sm rounded p-2 ${c.author_id === user?.id ? 'bg-primary/5 border-l-2 border-primary ml-4' : 'bg-muted/40 mr-4'}`}>
+                 <div className="flex justify-between items-center mb-1">
+                   <span className="font-bold text-[10px] uppercase tracking-wider">{senderName}</span>
+                   <span className="text-[10px] text-muted-foreground">{new Date(c.created_at).toLocaleDateString()}</span>
+                 </div>
+                 {c.body}
+               </div>
+             );
+          })}
           {(!comments || comments.length === 0) && (
             <p className="text-xs text-muted-foreground py-2 italic text-center">No messages in this thread.</p>
           )}
