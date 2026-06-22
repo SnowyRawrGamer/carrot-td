@@ -51,7 +51,8 @@ function FeedbackPage() {
           title: `${category}: ${body.substring(0, 40)}${body.length > 40 ? '...' : ''}`,
           body: `User: ${user.email}\n\n${body}`,
           status: "viewer_ideas",
-          created_by: user.id
+          created_by: user.id,
+          is_feedback: true // Explicitly mark as feedback
         })
         .select()
         .single();
