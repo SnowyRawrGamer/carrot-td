@@ -1,0 +1,200 @@
+import { createFileRoute, Link } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { ArrowLeft, Sparkles, Carrot } from "lucide-react";
+import { useState } from "react";
+import { Page } from "@/components/layout/page";
+import { Card } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { supabase } from "@/integrations/supabase/client";
+import { rarityClass } from "@/lib/utils-slug";
+
+export const Route = createFileRoute("/summons/$slug")({
+  component: SummonDetail,
+});
+
+function weightedRoll(entries: any[]) {
+  const total = entries.reduce((s, e) => s + Number(e.drop_rate || 0), 0);
+  let roll = Math.random() * total;
+  for (const e of entries) {
+    roll -= Number(e.drop_rate || 0);
+    if (roll <= 0) {
+      return e.unit ? e.unit : { name: e.custom_name, photo_url: e.custom_image_url, rarity: null, slug: null };
+    }
+  }
+  const last = entries[entries.length - 1];
+  if (!last) return null;
+  return last.unit ? last.unit : { name: last.custom_name, photo_url: last.custom_image_url, rarity: null, slug: null };
+}
+
+function fmtDate(d?: string | null) {
+  return d ? new Date(d + "T00:00:00").toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" }) : null;
+}
+
+function SummonDetail() {
+  const { slug } = Route.useParams();
+  const [results, setResults] = useState<any[] | null>(null);
+
+  const { data, isLoading } = useQuery({
+    queryKey: ["summon", slug],
+    queryFn: async () => {
+      const { data: summon, error } = await supabase.from("summons").select("*").eq("slug", slug).maybeSingle();
+      if (error) throw error;
+      if (!summon) return null;
+      const { data: entries } = await supabase
+        .from("summon_entries")
+        .select("drop_rate, custom_name, custom_image_url, unit:units(id, slug, name, photo_url, rarity, tier)")
+        .eq("summon_id", summon.id);
+
+      const { data: updateLinks } = await supabase
+        .from("update_summons")
+        .select("update:updates(id, slug, name, released_at)")
+        .eq("summon_id", summon.id);
+      const addedIn = (updateLinks || [])
+        .map((r: any) => r.update)
+        .filter(Boolean)
+        .sort((a: any, b: any) => (a.released_at || "").localeCompare(b.released_at || ""))[0] || null;
+
+      let removedIn = null;
+      if (summon.removed_update_id) {
+        const { data: ru } = await supabase.from("updates").select("id, slug, name, released_at").eq("id", summon.removed_update_id).maybeSingle();
+        removedIn = ru;
+      }
+
+      return { summon, entries: (entries || []) as any[], addedIn, removedIn };
+    },
+  });
+
+  if (isLoading) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
+  if (!data) return <Page><Card className="p-8 text-center">Summon not found.</Card></Page>;
+  const { summon, entries, addedIn, removedIn } = data;
+  const total = entries.reduce((s, e) => s + Number(e.drop_rate || 0), 0);
+  const sorted = [...entries].sort((a, b) => Number(b.drop_rate) - Number(a.drop_rate));
+  const canSimulate = entries.length > 0;
+  const addedDate = fmtDate(addedIn?.released_at);
+  const removedDate = fmtDate(removedIn?.released_at);
+
+  function rollOne() { setResults([weightedRoll(entries)]); }
+  function rollTen() { setResults(Array.from({ length: 10 }, () => weightedRoll(entries))); }
+
+  return (
+    <Page>
+      <Link to="/summons" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+        <ArrowLeft className="h-4 w-4 mr-1" /> All summons
+      </Link>
+
+      {(addedIn || removedIn) && (
+        <Card className="p-3 mb-4 bg-primary/5 border-primary/30 text-sm space-y-1">
+          {addedIn && (
+            <p>
+              Added in{" "}
+              <Link to="/updates/$slug" params={{ slug: addedIn.slug }} className="font-semibold text-primary hover:underline">{addedIn.name}</Link>
+              {addedDate ? ` (${addedDate})` : ""}
+              {removedIn && " and"}
+              {removedIn && (
+                <>
+                  {" "}removed in{" "}
+                  <Link to="/updates/$slug" params={{ slug: removedIn.slug }} className="font-semibold text-primary hover:underline">{removedIn.name}</Link>
+                  {removedDate ? ` (${removedDate})` : ""}
+                </>
+              )}.
+            </p>
+          )}
+          {!addedIn && removedIn && (
+            <p>
+              Removed in{" "}
+              <Link to="/updates/$slug" params={{ slug: removedIn.slug }} className="font-semibold text-primary hover:underline">{removedIn.name}</Link>
+              {removedDate ? ` (${removedDate})` : ""}.
+            </p>
+          )}
+        </Card>
+      )}
+
+      <Card className="overflow-hidden p-0 mb-6">
+        <div className="aspect-[21/9] bg-muted">
+          {summon.banner_url ? <img src={summon.banner_url} alt={summon.name} className="h-full w-full object-contain" /> :
+            <div className="h-full w-full grid place-items-center text-muted-foreground"><Sparkles className="h-12 w-12" /></div>}
+        </div>
+        <div className="p-5">
+          <div className="flex items-center gap-2">
+            <h1 className="text-2xl font-bold">{summon.name}</h1>
+            {summon.is_custom && <span className="text-xs px-2 py-0.5 rounded border bg-primary/10 text-primary">Custom</span>}
+            {removedIn && <span className="text-xs px-2 py-0.5 rounded border bg-destructive/10 text-destructive border-destructive/30">Removed</span>}
+          </div>
+          {summon.description && <p className="text-muted-foreground mt-1">{summon.description}</p>}
+        </div>
+      </Card>
+
+      {canSimulate && (
+        <Card className="p-5 mb-6">
+          <h2 className="font-semibold mb-3">Simulate Summon</h2>
+          <div className="flex gap-2 mb-4">
+            <Button onClick={rollOne}>Single Pull</Button>
+            <Button variant="outline" onClick={rollTen}>10 Pull</Button>
+            {results && <Button variant="ghost" onClick={() => setResults(null)}>Clear</Button>}
+          </div>
+          {results && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
+              {results.map((unit, i) => {
+                if (!unit) return null;
+                const entry = entries.find((e) => (e.unit?.id && e.unit.id === unit.id) || (e.custom_name && e.custom_name === unit.name));
+                const card = (
+                  <div className="rounded-lg border bg-muted/30 p-2 text-center hover:border-primary/40 transition">
+                    <div className="h-16 w-full rounded-md bg-muted overflow-hidden mb-2">
+                      {unit.photo_url
+                        ? <img src={unit.photo_url} alt="" className="h-full w-full object-contain" />
+                        : <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-6 w-6" /></div>}
+                    </div>
+                    <div className="text-xs font-medium truncate">{unit.name}</div>
+                    {unit.rarity && <span className={`text-[10px] px-1 py-0.5 rounded border ${rarityClass(unit.rarity)}`}>{unit.rarity}</span>}
+                    {entry && <div className="text-[10px] text-muted-foreground mt-0.5">{Number(entry.drop_rate).toFixed(2)}%</div>}
+                  </div>
+                );
+                return unit.slug ? (
+                  <Link key={i} to="/units/$slug" params={{ slug: unit.slug }}>{card}</Link>
+                ) : (
+                  <div key={i}>{card}</div>
+                );
+              })}
+            </div>
+          )}
+        </Card>
+      )}
+
+      <Card className="p-5">
+        <div className="flex items-baseline justify-between mb-3">
+          <h2 className="font-semibold">Pool ({entries.length} {summon.is_custom ? "entries" : "units"})</h2>
+          <span className="text-sm text-muted-foreground">Total: {total.toFixed(2)}%</span>
+        </div>
+        {entries.length === 0 ? (
+          <p className="text-sm text-muted-foreground">Nothing in this pool yet.</p>
+        ) : (
+          <div className="divide-y">
+            {sorted.map((e, i) => {
+              const name = e.unit?.name || e.custom_name;
+              const photo = e.unit?.photo_url || e.custom_image_url;
+              if (!name) return null;
+              const row = (
+                <div className="flex items-center gap-3 py-3 hover:bg-accent/50 -mx-2 px-2 rounded">
+                  <div className="h-12 w-12 rounded-md bg-muted overflow-hidden shrink-0">
+                    {photo ? <img src={photo} alt="" className="h-full w-full object-cover" /> :
+                      <div className="h-full w-full grid place-items-center text-muted-foreground"><Carrot className="h-5 w-5" /></div>}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-medium truncate">{name}</div>
+                    {e.unit?.rarity && <span className={`text-[10px] px-1.5 py-0.5 rounded border ${rarityClass(e.unit.rarity)}`}>{e.unit.rarity}</span>}
+                  </div>
+                  <div className="font-semibold tabular-nums">{Number(e.drop_rate).toFixed(2)}%</div>
+                </div>
+              );
+              return e.unit ? (
+                <Link key={i} to="/units/$slug" params={{ slug: e.unit.slug }}>{row}</Link>
+              ) : (
+                <div key={i}>{row}</div>
+              );
+            })}
+          </div>
+        )}
+      </Card>
+    </Page>
+  );
+}
