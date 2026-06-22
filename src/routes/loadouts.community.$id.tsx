@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useState, useEffect } from "react";
-import { Carrot, ArrowLeft, ChevronUp, ChevronDown } from "lucide-react";
+import { Carrot, ArrowLeft, ChevronUp, ChevronDown, AlertCircle } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -22,15 +22,18 @@ function CommunityLoadoutDetail() {
   const [resolvedMap, setResolvedMap] = useState<Record<string, ResolvedUnit>>({});
   const [unitMeta, setUnitMeta] = useState<Record<string, { unit: any; paths: any[]; levels: any[] }>>({});
 
-  const { data } = useQuery({
+  const { data, isLoading, error: queryError } = useQuery({
     queryKey: ["community-loadout", id],
     queryFn: async () => {
+      // Use maybeSingle instead of single to prevent crashing if not found or RLS-blocked
       const { data: loadout, error } = await supabase
         .from("public_loadouts")
         .select("id, title, description, display_name")
         .eq("id", id)
-        .single();
+        .maybeSingle();
+      
       if (error) throw error;
+      if (!loadout) return null;
 
       const { data: links } = await supabase
         .from("community_loadout_units")
@@ -88,7 +91,30 @@ function CommunityLoadoutDetail() {
     onError: (e: any) => toast.error(e.message),
   });
 
-  if (!data) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
+  if (isLoading) return <Page><div className="text-muted-foreground">Loading loadout...</div></Page>;
+
+  if (queryError || !data) {
+    return (
+      <Page>
+        <Link to="/loadouts/community" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground mb-4">
+          <ArrowLeft className="h-4 w-4 mr-1" /> Back to community loadouts
+        </Link>
+        <Card className="p-8 text-center max-w-lg mx-auto">
+          <AlertCircle className="h-10 w-10 text-destructive mx-auto mb-4" />
+          <h2 className="text-xl font-bold mb-2">Loadout not found</h2>
+          <p className="text-muted-foreground text-sm">
+            This loadout may have been removed, or you might not have permission to view it yet.
+          </p>
+          {queryError && (
+            <p className="text-xs text-destructive mt-4 bg-destructive/5 p-2 rounded">
+              {(queryError as any).message}
+            </p>
+          )}
+        </Card>
+      </Page>
+    );
+  }
+
   const { loadout, score, myVote } = data;
   const resolvedList = Object.values(resolvedMap);
   const totals = computeLoadoutTotals(resolvedList as any);
@@ -138,7 +164,7 @@ function CommunityLoadoutDetail() {
               )}
               {sel.pathIndex !== null && (
                 <Select value={String(sel.level)} onValueChange={(v) => updateSelection(unitId, sel.pathIndex, Number(v))}>
-                  <SelectTrigger className="w-28"><SelectValue /></SelectTrigger>
+                  <SelectTrigger className="w-28"><SelectValue placeholder="Level" /></SelectTrigger>
                   <SelectContent>
                     {Array.from({ length: Math.max(1, meta.levels.filter((l: any) => l.path_id === meta.paths.find((p: any) => p.path_index === sel.pathIndex)?.id).length) }, (_, i) => i + 1).map((lvl) => (
                       <SelectItem key={lvl} value={String(lvl)}>Level {lvl}</SelectItem>
