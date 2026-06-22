@@ -34,7 +34,7 @@ export function NotesManager() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_notes")
-        .select("*, author:profiles!created_by(display_name, public_name)")
+        .select("*, author:public_profiles!created_by(display_name, public_name)")
         .order("created_at", { ascending: false });
       if (error) throw error;
       return data;
@@ -152,7 +152,7 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
     queryFn: async () => {
       const { data, error } = await supabase
         .from("site_note_comments")
-        .select("*, author:profiles!author_id(display_name, public_name)")
+        .select("*, author:public_profiles!author_id(display_name, public_name)")
         .eq("note_id", note.id)
         .order("created_at");
       if (error) throw error;
