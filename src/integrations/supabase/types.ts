@@ -289,6 +289,76 @@ export type Database = {
           },
         ]
       }
+      daily_loadout_ratings: {
+        Row: {
+          created_at: string | null
+          difficulty_rating: number
+          fun_rating: number
+          id: string
+          loadout_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          difficulty_rating: number
+          fun_rating: number
+          id?: string
+          loadout_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          difficulty_rating?: number
+          fun_rating?: number
+          id?: string
+          loadout_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "daily_loadout_ratings_loadout_id_fkey"
+            columns: ["loadout_id"]
+            isOneToOne: false
+            referencedRelation: "daily_loadouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_loadout_ratings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_loadout_ratings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      daily_loadouts: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          unit_ids: string[]
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          unit_ids: string[]
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          unit_ids?: string[]
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -319,6 +389,7 @@ export type Database = {
       site_feedback: {
         Row: {
           admin_response: string | null
+          allow_response: boolean | null
           body: string
           category: string
           created_at: string
@@ -330,6 +401,7 @@ export type Database = {
         }
         Insert: {
           admin_response?: string | null
+          allow_response?: boolean | null
           body: string
           category: string
           created_at?: string
@@ -341,6 +413,7 @@ export type Database = {
         }
         Update: {
           admin_response?: string | null
+          allow_response?: boolean | null
           body?: string
           category?: string
           created_at?: string
@@ -412,6 +485,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_feedback: boolean | null
           status: string
           title: string
           updated_at: string
@@ -421,6 +495,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          is_feedback?: boolean | null
           status?: string
           title: string
           updated_at?: string
@@ -430,6 +505,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          is_feedback?: boolean | null
           status?: string
           title?: string
           updated_at?: string
@@ -851,15 +927,6 @@ export type Database = {
           public_name: string
         }[]
       }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_editor: { Args: { _user_id: string }; Returns: boolean }
-      is_staff: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "editor" | "viewer"

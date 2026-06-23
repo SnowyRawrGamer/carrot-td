@@ -321,11 +321,13 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
       if (feedbackError) throw feedbackError;
 
       if (adminResponse.trim()) {
-        await supabase.from("site_note_comments").insert({
-          note_id: note.id,
-          author_id: user?.id,
-          body: adminResponse.trim()
-        });
+        if (user?.id) {
+          await supabase.from("site_note_comments").insert({
+            note_id: note.id,
+            author_id: user.id,
+            body: adminResponse.trim()
+          });
+        }
       }
 
       onMove(resolution);

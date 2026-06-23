@@ -135,11 +135,6 @@ function CommunityLoadoutDetail() {
           <p className="text-muted-foreground text-sm">
             This loadout may have been removed, or you might not have permission to view it yet.
           </p>
-          {queryError && (
-            <p className="text-xs text-destructive mt-4 bg-destructive/5 p-2 rounded">
-              {(queryError as any).message}
-            </p>
-          )}
         </Card>
       </Page>
     );

@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as FeedbackRouteImport } from './routes/feedback'
+import { Route as DailyVaultRouteImport } from './routes/daily-vault'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AuthenticatedRouteRouteImport } from './routes/_authenticated/route'
 import { Route as IndexRouteImport } from './routes/index'
@@ -30,6 +31,11 @@ import { Route as LoadoutsCommunityIdRouteImport } from './routes/loadouts.commu
 const FeedbackRoute = FeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DailyVaultRoute = DailyVaultRouteImport.update({
+  id: '/daily-vault',
+  path: '/daily-vault',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AuthRoute = AuthRouteImport.update({
@@ -115,6 +121,7 @@ const LoadoutsCommunityIdRoute = LoadoutsCommunityIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
@@ -133,6 +140,7 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
+  '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
@@ -153,6 +161,7 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/_authenticated': typeof AuthenticatedRouteRouteWithChildren
   '/auth': typeof AuthRoute
+  '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
@@ -173,6 +182,7 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/auth'
+    | '/daily-vault'
     | '/feedback'
     | '/admin'
     | '/chests/$slug'
@@ -191,6 +201,7 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/auth'
+    | '/daily-vault'
     | '/feedback'
     | '/admin'
     | '/chests/$slug'
@@ -210,6 +221,7 @@ export interface FileRouteTypes {
     | '/'
     | '/_authenticated'
     | '/auth'
+    | '/daily-vault'
     | '/feedback'
     | '/_authenticated/admin'
     | '/chests/$slug'
@@ -230,6 +242,7 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AuthenticatedRouteRoute: typeof AuthenticatedRouteRouteWithChildren
   AuthRoute: typeof AuthRoute
+  DailyVaultRoute: typeof DailyVaultRoute
   FeedbackRoute: typeof FeedbackRoute
   ChestsSlugRoute: typeof ChestsSlugRoute
   SummonsSlugRoute: typeof SummonsSlugRoute
@@ -252,6 +265,13 @@ declare module '@tanstack/react-router' {
       path: '/feedback'
       fullPath: '/feedback'
       preLoaderRoute: typeof FeedbackRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/daily-vault': {
+      id: '/daily-vault'
+      path: '/daily-vault'
+      fullPath: '/daily-vault'
+      preLoaderRoute: typeof DailyVaultRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/auth': {
@@ -384,6 +404,7 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
+  DailyVaultRoute: DailyVaultRoute,
   FeedbackRoute: FeedbackRoute,
   ChestsSlugRoute: ChestsSlugRoute,
   SummonsSlugRoute: SummonsSlugRoute,
