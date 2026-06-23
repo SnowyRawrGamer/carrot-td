@@ -133,7 +133,7 @@ function Home() {
             throw insertError;
           }
 
-          return await fetchFullUnits({ ...newLoadout, daily_loadout_ratings: [] });
+          return newLoadout ? await fetchFullUnits({ ...newLoadout, daily_loadout_ratings: [] }) : null;
         } else {
           console.warn("[DailyLoadout] Not enough units in database to generate loadout:", randomUnits?.length);
         }
