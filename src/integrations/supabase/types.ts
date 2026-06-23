@@ -50,13 +50,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "audit_log_changed_by_fkey"
-            columns: ["changed_by"]
-            isOneToOne: false
-            referencedRelation: "public_editors"
-            referencedColumns: ["id"]
-          },
         ]
       }
       chest_entries: {
@@ -232,13 +225,6 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
-          {
-            foreignKeyName: "community_loadout_votes_user_id_fkey"
-            columns: ["user_id"]
-            isOneToOne: false
-            referencedRelation: "public_editors"
-            referencedColumns: ["id"]
-          },
         ]
       }
       community_loadouts: {
@@ -280,14 +266,70 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+        ]
+      }
+      daily_loadout_ratings: {
+        Row: {
+          created_at: string | null
+          difficulty_rating: number
+          fun_rating: number
+          id: string
+          loadout_id: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          difficulty_rating: number
+          fun_rating: number
+          id?: string
+          loadout_id?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          difficulty_rating?: number
+          fun_rating?: number
+          id?: string
+          loadout_id?: string | null
+          user_id?: string
+        }
+        Relationships: [
           {
-            foreignKeyName: "community_loadouts_creator_id_fkey"
-            columns: ["creator_id"]
+            foreignKeyName: "daily_loadout_ratings_loadout_id_fkey"
+            columns: ["loadout_id"]
             isOneToOne: false
-            referencedRelation: "public_editors"
+            referencedRelation: "daily_loadouts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_loadout_ratings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
         ]
+      }
+      daily_loadouts: {
+        Row: {
+          created_at: string | null
+          date: string
+          id: string
+          unit_ids: string[]
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          id?: string
+          unit_ids: string[]
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          id?: string
+          unit_ids?: string[]
+        }
+        Relationships: []
       }
       profiles: {
         Row: {
@@ -319,6 +361,7 @@ export type Database = {
       site_feedback: {
         Row: {
           admin_response: string | null
+          allow_response: boolean | null
           body: string
           category: string
           created_at: string
@@ -330,6 +373,7 @@ export type Database = {
         }
         Insert: {
           admin_response?: string | null
+          allow_response?: boolean | null
           body: string
           category: string
           created_at?: string
@@ -341,6 +385,7 @@ export type Database = {
         }
         Update: {
           admin_response?: string | null
+          allow_response?: boolean | null
           body?: string
           category?: string
           created_at?: string
@@ -391,13 +436,6 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
-            foreignKeyName: "site_note_comments_author_id_fkey"
-            columns: ["author_id"]
-            isOneToOne: false
-            referencedRelation: "public_editors"
-            referencedColumns: ["id"]
-          },
-          {
             foreignKeyName: "site_note_comments_note_id_fkey"
             columns: ["note_id"]
             isOneToOne: false
@@ -412,6 +450,7 @@ export type Database = {
           created_at: string
           created_by: string
           id: string
+          is_feedback: boolean | null
           status: string
           title: string
           updated_at: string
@@ -421,6 +460,7 @@ export type Database = {
           created_at?: string
           created_by: string
           id?: string
+          is_feedback?: boolean | null
           status?: string
           title: string
           updated_at?: string
@@ -430,6 +470,7 @@ export type Database = {
           created_at?: string
           created_by?: string
           id?: string
+          is_feedback?: boolean | null
           status?: string
           title?: string
           updated_at?: string
@@ -440,13 +481,6 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
-            referencedColumns: ["id"]
-          },
-          {
-            foreignKeyName: "site_notes_created_by_fkey"
-            columns: ["created_by"]
-            isOneToOne: false
-            referencedRelation: "public_editors"
             referencedColumns: ["id"]
           },
         ]
@@ -849,6 +883,14 @@ export type Database = {
           email: string
           id: string
           public_name: string
+        }[]
+      }
+      get_editors: {
+        Args: never
+        Returns: {
+          id: string
+          public_name: string
+          role: Database["public"]["Enums"]["app_role"]
         }[]
       }
       has_role: {
