@@ -50,6 +50,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "audit_log_changed_by_fkey"
+            columns: ["changed_by"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       chest_entries: {
@@ -225,6 +232,13 @@ export type Database = {
             referencedRelation: "profiles"
             referencedColumns: ["id"]
           },
+          {
+            foreignKeyName: "community_loadout_votes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
         ]
       }
       community_loadouts: {
@@ -264,6 +278,13 @@ export type Database = {
             columns: ["creator_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "community_loadouts_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
             referencedColumns: ["id"]
           },
         ]
@@ -306,6 +327,13 @@ export type Database = {
             columns: ["user_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "daily_loadout_ratings_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
             referencedColumns: ["id"]
           },
         ]
@@ -436,6 +464,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "site_note_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "site_note_comments_note_id_fkey"
             columns: ["note_id"]
             isOneToOne: false
@@ -481,6 +516,13 @@ export type Database = {
             columns: ["created_by"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "site_notes_created_by_fkey"
+            columns: ["created_by"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
             referencedColumns: ["id"]
           },
         ]
@@ -885,23 +927,6 @@ export type Database = {
           public_name: string
         }[]
       }
-      get_editors: {
-        Args: never
-        Returns: {
-          id: string
-          public_name: string
-          role: Database["public"]["Enums"]["app_role"]
-        }[]
-      }
-      has_role: {
-        Args: {
-          _role: Database["public"]["Enums"]["app_role"]
-          _user_id: string
-        }
-        Returns: boolean
-      }
-      is_editor: { Args: { _user_id: string }; Returns: boolean }
-      is_staff: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "editor" | "viewer"
