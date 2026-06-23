@@ -47,15 +47,14 @@ function Home() {
         .eq("date", today)
         .maybeSingle();
 
-      // If it doesn't exist, we'll try to generate it (this is a fallback if the function isn't called)
+      // If it doesn't exist, we'll try to generate it
       if (!loadout && !error) {
-        // Since we can't reliably run RPC or complex logic without the schema being ready,
-        // we'll fetch random units and insert if needed. 
-        // In a real app, this would be an RPC call: supabase.rpc('get_or_create_daily_loadout')
-        const { data: randomUnits } = await supabase
+        const { data: randomUnits, error: fetchError } = await supabase
           .from("units")
           .select("id")
-          .limit(20);
+          .limit(100);
+        
+        if (fetchError) throw fetchError;
         
         if (randomUnits && randomUnits.length >= 5) {
           const selected = randomUnits
@@ -63,13 +62,25 @@ function Home() {
             .slice(0, 5)
             .map(u => u.id);
           
+          // Insert today's loadout
           const { data: newLoadout, error: insertError } = await supabase
             .from("daily_loadouts" as any)
             .insert({ date: today, unit_ids: selected })
             .select()
             .single();
           
-          if (!insertError) loadout = newLoadout;
+          if (insertError) {
+            // Handle race condition: if another user inserted it while we were fetching
+            const { data: retryLoadout } = await supabase
+              .from("daily_loadouts" as any)
+              .select("*, daily_loadout_ratings(*)")
+              .eq("date", today)
+              .maybeSingle();
+            
+            if (retryLoadout) loadout = retryLoadout;
+          } else {
+            loadout = { ...newLoadout, daily_loadout_ratings: [] };
+          }
         }
       }
 
@@ -82,7 +93,6 @@ function Home() {
         
         if (unitsError) throw unitsError;
         
-        // Map units to maintain order if possible or just return
         return {
           ...loadout,
           units: fullUnits
