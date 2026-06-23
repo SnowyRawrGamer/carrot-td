@@ -1,12 +1,12 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { Carrot, Sparkles, Package, ArrowRight, Star, History } from "lucide-react";
+import { Carrot, Sparkles, Package, ArrowRight, Star, History, Clock } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { rarityClass } from "@/lib/utils-slug";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 
@@ -19,6 +19,40 @@ export const Route = createFileRoute("/")({
   }),
   component: Home,
 });
+
+function DailyCountdown({ onComplete }: { onComplete: () => void }) {
+  const [timeLeft, setTimeLeft] = useState("");
+
+  useEffect(() => {
+    const calculateTime = () => {
+      const now = new Date();
+      const nextDay = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + 1));
+      const diff = nextDay.getTime() - now.getTime();
+
+      if (diff <= 0) {
+        onComplete();
+        return;
+      }
+
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+      const s = Math.floor((diff % (1000 * 60)) / 1000);
+
+      setTimeLeft(`${h.toString().padStart(2, '0')}:${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`);
+    };
+
+    calculateTime();
+    const timer = setInterval(calculateTime, 1000);
+    return () => clearInterval(timer);
+  }, [onComplete]);
+
+  return (
+    <div className="flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full text-[10px] sm:text-xs font-mono text-muted-foreground border border-border/50">
+      <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+      <span>Resets in: {timeLeft}</span>
+    </div>
+  );
+}
 
 function Home() {
   const { user } = useAuth();
@@ -183,10 +217,13 @@ function Home() {
 
       {/* Loadout of the Day Section */}
       <section className="mt-12">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-6 w-6 text-yellow-500" />
-            <h2 className="text-2xl font-bold">Loadout of the Day</h2>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              <Sparkles className="h-6 w-6 text-yellow-500" />
+              <h2 className="text-2xl font-bold">Loadout of the Day</h2>
+            </div>
+            <DailyCountdown onComplete={() => queryClient.invalidateQueries({ queryKey: ["daily-loadout"] })} />
           </div>
           <Button asChild variant="ghost" size="sm">
             <Link to="/daily-vault" className="gap-1">
