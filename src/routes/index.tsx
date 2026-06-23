@@ -35,26 +35,37 @@ function Home() {
     },
   });
 
-  const { data: dailyLoadout, isLoading: loadingLoadout } = useQuery({
+  const { data: dailyLoadout, isLoading: loadingLoadout, error: loadoutError } = useQuery({
     queryKey: ["daily-loadout", "today"],
     queryFn: async () => {
       const today = new Date().toISOString().split("T")[0];
+      console.log("[DailyLoadout] Fetching for date:", today);
       
       // Try to get today's loadout
-      let { data: loadout, error } = await supabase
+      const { data: loadout, error } = await supabase
         .from("daily_loadouts" as any)
         .select("*, daily_loadout_ratings(*)")
         .eq("date", today)
         .maybeSingle();
 
+      if (error) {
+        console.error("[DailyLoadout] Fetch error:", error);
+        throw error;
+      }
+
       // If it doesn't exist, we'll try to generate it
-      if (!loadout && !error) {
+      if (!loadout) {
+        console.log("[DailyLoadout] Today's loadout not found, attempting generation...");
+        
         const { data: randomUnits, error: fetchError } = await supabase
           .from("units")
           .select("id")
           .limit(100);
         
-        if (fetchError) throw fetchError;
+        if (fetchError) {
+          console.error("[DailyLoadout] Error fetching units for generation:", fetchError);
+          throw fetchError;
+        }
         
         if (randomUnits && randomUnits.length >= 5) {
           const selected = randomUnits
@@ -62,7 +73,8 @@ function Home() {
             .slice(0, 5)
             .map(u => u.id);
           
-          // Insert today's loadout
+          console.log("[DailyLoadout] Inserting new loadout with units:", selected);
+          
           const { data: newLoadout, error: insertError } = await supabase
             .from("daily_loadouts" as any)
             .insert({ date: today, unit_ids: selected })
@@ -70,37 +82,48 @@ function Home() {
             .single();
           
           if (insertError) {
-            // Handle race condition: if another user inserted it while we were fetching
+            console.error("[DailyLoadout] Insert error (could be RLS):", insertError);
+            // Handle race condition: check if another user inserted it while we were trying
             const { data: retryLoadout } = await supabase
               .from("daily_loadouts" as any)
               .select("*, daily_loadout_ratings(*)")
               .eq("date", today)
               .maybeSingle();
             
-            if (retryLoadout) loadout = retryLoadout;
-          } else {
-            loadout = { ...newLoadout, daily_loadout_ratings: [] };
+            if (retryLoadout) return await fetchFullUnits(retryLoadout);
+            
+            // If retry fails, we have to throw so the UI can show the error
+            throw insertError;
           }
-        }
-      }
 
-      if (loadout) {
-        // Fetch full unit details for the loadout
-        const { data: fullUnits, error: unitsError } = await supabase
-          .from("units")
-          .select("id, name, photo_url, rarity, slug")
-          .in("id", loadout.unit_ids);
-        
-        if (unitsError) throw unitsError;
-        
-        return {
-          ...loadout,
-          units: fullUnits
-        };
+          return await fetchFullUnits({ ...newLoadout, daily_loadout_ratings: [] });
+        } else {
+          console.warn("[DailyLoadout] Not enough units in database to generate loadout:", randomUnits?.length);
+        }
+      } else {
+        return await fetchFullUnits(loadout);
       }
       return null;
     },
+    retry: false
   });
+
+  async function fetchFullUnits(loadout: any) {
+    const { data: fullUnits, error: unitsError } = await supabase
+      .from("units")
+      .select("id, name, photo_url, rarity, slug")
+      .in("id", loadout.unit_ids);
+    
+    if (unitsError) {
+      console.error("[DailyLoadout] Error fetching full unit details:", unitsError);
+      throw unitsError;
+    }
+    
+    return {
+      ...loadout,
+      units: fullUnits
+    };
+  }
 
   const userRating = dailyLoadout?.daily_loadout_ratings?.find((r: any) => r.user_id === user?.id);
 
@@ -175,6 +198,21 @@ function Home() {
         <Card className="p-6 bg-card/50 border-primary/20">
           {loadingLoadout ? (
             <div className="h-48 flex items-center justify-center">Loading today's challenge...</div>
+          ) : loadoutError ? (
+            <div className="h-48 flex flex-col items-center justify-center text-center p-4">
+              <p className="text-destructive font-medium">Failed to load or generate today's loadout.</p>
+              <p className="text-xs text-muted-foreground mt-2 max-w-xs">
+                {(loadoutError as any)?.message || "Check RLS policies or database connectivity."}
+              </p>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                className="mt-4" 
+                onClick={() => queryClient.invalidateQueries({ queryKey: ["daily-loadout"] })}
+              >
+                Retry
+              </Button>
+            </div>
           ) : dailyLoadout ? (
             <div className="grid gap-8 md:grid-cols-2">
               <div>
@@ -249,7 +287,7 @@ function Home() {
               </div>
             </div>
           ) : (
-            <div className="text-center py-8">No daily loadout available yet.</div>
+            <div className="text-center py-8">No daily loadout available today.</div>
           )}
         </Card>
       </section>
