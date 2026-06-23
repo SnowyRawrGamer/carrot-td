@@ -4,6 +4,7 @@ import { History, Star, Carrot } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
+import { DailyLoadoutCard } from "@/components/DailyLoadoutCard";
 
 export const Route = createFileRoute("/daily-vault")({
   head: () => ({
@@ -63,59 +64,71 @@ function DailyVault() {
         <p className="text-muted-foreground mt-2">Past daily challenges and their community scores.</p>
       </div>
 
-      {isLoading ? (
-        <div className="grid gap-4 md:grid-cols-2">
-          {[1, 2, 3, 4].map(i => <div key={i} className="h-48 rounded-xl bg-muted animate-pulse" />)}
-        </div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2">
-          {loadouts?.map((loadout: any) => (
-            <Card key={loadout.id} className="p-5 flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <span className="font-bold text-lg">
-                  {new Date(loadout.date).toLocaleDateString(undefined, { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}
-                </span>
-              </div>
+      <div className="mb-12">
+        <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+          Today's Challenge
+        </h2>
+        <DailyLoadoutCard />
+      </div>
 
-              <div className="grid grid-cols-5 gap-2">
-                {loadout.units.map((u: any) => (
-                  <Link key={u.id} to="/units/$slug" params={{ slug: u.slug }} className="group">
-                    <div className="aspect-square rounded-lg overflow-hidden border bg-muted relative">
-                      {u.photo_url ? (
-                        <img src={u.photo_url} alt={u.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform" />
-                      ) : (
-                        <div className="h-full w-full grid place-items-center"><Carrot className="h-4 w-4 text-muted-foreground" /></div>
-                      )}
-                    </div>
-                  </Link>
-                ))}
-              </div>
-
-              <div className="flex gap-4 border-t pt-4">
-                <div className="flex items-center gap-1.5 text-yellow-600 bg-yellow-50 px-3 py-1 rounded-full text-xs font-semibold">
-                  <Star className="h-3.5 w-3.5 fill-yellow-500" />
-                  <span>Fun: {loadout.avgFun > 0 ? loadout.avgFun.toFixed(1) : "N/A"}</span>
+      <div>
+        <h2 className="text-xl font-bold mb-6 flex items-center gap-2">
+          Past Challenges
+        </h2>
+        {isLoading ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {[1, 2, 3, 4].map(i => <div key={i} className="h-48 rounded-xl bg-muted animate-pulse" />)}
+          </div>
+        ) : (
+          <div className="grid gap-6 md:grid-cols-2">
+            {loadouts?.map((loadout: any) => (
+              <Card key={loadout.id} className="p-5 flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <span className="font-bold text-lg">
+                    {new Date(loadout.date).toLocaleDateString(undefined, { 
+                      weekday: 'long', 
+                      year: 'numeric', 
+                      month: 'long', 
+                      day: 'numeric' 
+                    })}
+                  </span>
                 </div>
-                <div className="flex items-center gap-1.5 text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-xs font-semibold">
-                  <Star className="h-3.5 w-3.5 fill-orange-500" />
-                  <span>Diff: {loadout.avgDifficulty > 0 ? loadout.avgDifficulty.toFixed(1) : "N/A"}</span>
-                </div>
-              </div>
-            </Card>
-          ))}
 
-          {loadouts?.length === 0 && (
-            <div className="col-span-full py-20 text-center border-2 border-dashed rounded-3xl text-muted-foreground">
-              No past loadouts in the vault yet.
-            </div>
-          )}
-        </div>
-      )}
+                <div className="grid grid-cols-5 gap-2">
+                  {loadout.units.map((u: any) => (
+                    <Link key={u.id} to="/units/$slug" params={{ slug: u.slug }} className="group">
+                      <div className="aspect-square rounded-lg overflow-hidden border bg-muted relative">
+                        {u.photo_url ? (
+                          <img src={u.photo_url} alt={u.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform" />
+                        ) : (
+                          <div className="h-full w-full grid place-items-center"><Carrot className="h-4 w-4 text-muted-foreground" /></div>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+
+                <div className="flex gap-4 border-t pt-4">
+                  <div className="flex items-center gap-1.5 text-yellow-600 bg-yellow-50 px-3 py-1 rounded-full text-xs font-semibold">
+                    <Star className="h-3.5 w-3.5 fill-yellow-500" />
+                    <span>Fun: {loadout.avgFun > 0 ? loadout.avgFun.toFixed(1) : "N/A"}</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-orange-600 bg-orange-50 px-3 py-1 rounded-full text-xs font-semibold">
+                    <Star className="h-3.5 w-3.5 fill-orange-500" />
+                    <span>Diff: {loadout.avgDifficulty > 0 ? loadout.avgDifficulty.toFixed(1) : "N/A"}</span>
+                  </div>
+                </div>
+              </Card>
+            ))}
+
+            {loadouts?.length === 0 && (
+              <div className="col-span-full py-20 text-center border-2 border-dashed rounded-3xl text-muted-foreground">
+                No past loadouts in the vault yet.
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </Page>
   );
 }
