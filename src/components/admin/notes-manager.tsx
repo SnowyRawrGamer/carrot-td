@@ -217,8 +217,10 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
       if (error) return null;
       return data;
     },
-    enabled: note.is_feedback
+    enabled: !!note.id // Always check for feedback for every note
   });
+
+  const isFeedback = !!feedback;
 
   const { data: comments } = useQuery({
     queryKey: ["note-comments", note.id],
@@ -371,7 +373,7 @@ function NoteDetail({ note, onMove, onDelete, authorName, onUpdated }: { note: a
         )}
       </div>
 
-      {note.is_feedback === true && (
+      {isFeedback && (
         <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
           <div className="flex justify-between items-center">
             <h4 className="text-sm font-bold flex items-center gap-1.5"><Shield className="h-4 w-4" /> Resolve Feedback</h4>
