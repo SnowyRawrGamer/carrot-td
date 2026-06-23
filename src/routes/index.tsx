@@ -47,9 +47,12 @@ function DailyCountdown({ onComplete }: { onComplete: () => void }) {
   }, [onComplete]);
 
   return (
-    <div className="flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full text-[10px] sm:text-xs font-mono text-muted-foreground border border-border/50">
-      <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-      <span>Resets in: {timeLeft}</span>
+    <div className="flex flex-col items-start gap-1">
+      <div className="flex items-center gap-1.5 bg-muted/50 px-3 py-1 rounded-full text-[10px] sm:text-xs font-mono text-muted-foreground border border-border/50">
+        <Clock className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+        <span>Resets in: {timeLeft}</span>
+      </div>
+      <span className="text-[9px] text-muted-foreground/60 ml-1 italic">Resets at UTC midnight</span>
     </div>
   );
 }
