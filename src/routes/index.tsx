@@ -1,11 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
-import { Carrot, Sparkles, Package, ArrowRight } from "lucide-react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Carrot, Sparkles, Package, ArrowRight, Star, History } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { rarityClass } from "@/lib/utils-slug";
+import { useState } from "react";
+import { useAuth } from "@/lib/auth";
+import { toast } from "sonner";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -18,6 +21,9 @@ export const Route = createFileRoute("/")({
 });
 
 function Home() {
+  const { user } = useAuth();
+  const queryClient = useQueryClient();
+
   const { data: units } = useQuery({
     queryKey: ["units", "recent"],
     queryFn: async () => {
@@ -27,6 +33,99 @@ function Home() {
       if (error) throw error;
       return data;
     },
+  });
+
+  const { data: dailyLoadout, isLoading: loadingLoadout } = useQuery({
+    queryKey: ["daily-loadout", "today"],
+    queryFn: async () => {
+      const today = new Date().toISOString().split("T")[0];
+      
+      // Try to get today's loadout
+      let { data: loadout, error } = await supabase
+        .from("daily_loadouts" as any)
+        .select("*, daily_loadout_ratings(*)")
+        .eq("date", today)
+        .maybeSingle();
+
+      // If it doesn't exist, we'll try to generate it (this is a fallback if the function isn't called)
+      if (!loadout && !error) {
+        // Since we can't reliably run RPC or complex logic without the schema being ready,
+        // we'll fetch random units and insert if needed. 
+        // In a real app, this would be an RPC call: supabase.rpc('get_or_create_daily_loadout')
+        const { data: randomUnits } = await supabase
+          .from("units")
+          .select("id")
+          .limit(20);
+        
+        if (randomUnits && randomUnits.length >= 5) {
+          const selected = randomUnits
+            .sort(() => 0.5 - Math.random())
+            .slice(0, 5)
+            .map(u => u.id);
+          
+          const { data: newLoadout, error: insertError } = await supabase
+            .from("daily_loadouts" as any)
+            .insert({ date: today, unit_ids: selected })
+            .select()
+            .single();
+          
+          if (!insertError) loadout = newLoadout;
+        }
+      }
+
+      if (loadout) {
+        // Fetch full unit details for the loadout
+        const { data: fullUnits, error: unitsError } = await supabase
+          .from("units")
+          .select("id, name, photo_url, rarity, slug")
+          .in("id", loadout.unit_ids);
+        
+        if (unitsError) throw unitsError;
+        
+        // Map units to maintain order if possible or just return
+        return {
+          ...loadout,
+          units: fullUnits
+        };
+      }
+      return null;
+    },
+  });
+
+  const userRating = dailyLoadout?.daily_loadout_ratings?.find((r: any) => r.user_id === user?.id);
+
+  const rateMutation = useMutation({
+    mutationFn: async ({ fun, difficulty }: { fun: number, difficulty: number }) => {
+      if (!user) throw new Error("Must be signed in");
+      if (!dailyLoadout) throw new Error("No loadout found");
+
+      const ratingData = {
+        loadout_id: dailyLoadout.id,
+        user_id: user.id,
+        fun_rating: fun,
+        difficulty_rating: difficulty
+      };
+
+      if (userRating) {
+        const { error } = await supabase
+          .from("daily_loadout_ratings" as any)
+          .update(ratingData)
+          .eq("id", userRating.id);
+        if (error) throw error;
+      } else {
+        const { error } = await supabase
+          .from("daily_loadout_ratings" as any)
+          .insert(ratingData);
+        if (error) throw error;
+      }
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["daily-loadout"] });
+      toast.success("Rating submitted!");
+    },
+    onError: (err) => {
+      toast.error("Failed to submit rating: " + err.message);
+    }
   });
 
   return (
@@ -47,6 +146,102 @@ function Home() {
             <Button asChild size="lg" variant="outline"><Link to="/summons">Summons & chests</Link></Button>
           </div>
         </div>
+      </section>
+
+      {/* Loadout of the Day Section */}
+      <section className="mt-12">
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-6 w-6 text-yellow-500" />
+            <h2 className="text-2xl font-bold">Loadout of the Day</h2>
+          </div>
+          <Button asChild variant="ghost" size="sm">
+            <Link to="/daily-vault" className="gap-1">
+              <History className="h-4 w-4" /> View Vault
+            </Link>
+          </Button>
+        </div>
+
+        <Card className="p-6 bg-card/50 border-primary/20">
+          {loadingLoadout ? (
+            <div className="h-48 flex items-center justify-center">Loading today's challenge...</div>
+          ) : dailyLoadout ? (
+            <div className="grid gap-8 md:grid-cols-2">
+              <div>
+                <div className="grid grid-cols-5 gap-2">
+                  {dailyLoadout.units?.map((u: any) => (
+                    <Link key={u.id} to="/units/$slug" params={{ slug: u.slug }} className="group">
+                      <div className="aspect-square rounded-xl overflow-hidden border bg-muted relative">
+                        {u.photo_url ? (
+                          <img src={u.photo_url} alt={u.name} className="h-full w-full object-cover group-hover:scale-110 transition-transform" />
+                        ) : (
+                          <div className="h-full w-full grid place-items-center"><Carrot className="h-6 w-6 text-muted-foreground" /></div>
+                        )}
+                        <div className="absolute inset-x-0 bottom-0 bg-black/60 p-1">
+                          <p className="text-[8px] text-white truncate text-center font-medium">{u.name}</p>
+                        </div>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+                <div className="mt-4 flex gap-4 text-sm">
+                  <div className="flex items-center gap-1.5 bg-primary/10 text-primary px-3 py-1 rounded-full">
+                    <Star className="h-4 w-4 fill-primary" />
+                    <span className="font-bold">
+                      {dailyLoadout.daily_loadout_ratings?.length > 0 
+                        ? (dailyLoadout.daily_loadout_ratings.reduce((acc: number, curr: any) => acc + curr.fun_rating, 0) / dailyLoadout.daily_loadout_ratings.length).toFixed(1)
+                        : "N/A"}
+                    </span>
+                    <span className="text-primary/70 text-xs">Fun</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 bg-orange-500/10 text-orange-600 px-3 py-1 rounded-full">
+                    <Star className="h-4 w-4 fill-orange-500" />
+                    <span className="font-bold">
+                      {dailyLoadout.daily_loadout_ratings?.length > 0 
+                        ? (dailyLoadout.daily_loadout_ratings.reduce((acc: number, curr: any) => acc + curr.difficulty_rating, 0) / dailyLoadout.daily_loadout_ratings.length).toFixed(1)
+                        : "N/A"}
+                    </span>
+                    <span className="text-orange-600/70 text-xs">Difficulty</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col justify-center border-l pl-8">
+                {user ? (
+                  <div className="space-y-4">
+                    <h3 className="font-semibold text-lg">Rate today's loadout</h3>
+                    <div className="space-y-3">
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">How fun is it?</p>
+                        <RatingPicker 
+                          value={userRating?.fun_rating || 0} 
+                          onChange={(v) => rateMutation.mutate({ fun: v, difficulty: userRating?.difficulty_rating || 3 })}
+                        />
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Challenge level?</p>
+                        <RatingPicker 
+                          value={userRating?.difficulty_rating || 0} 
+                          onChange={(v) => rateMutation.mutate({ fun: userRating?.fun_rating || 3, difficulty: v })}
+                          color="text-orange-500"
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center space-y-3">
+                    <p className="text-muted-foreground text-sm">Sign in to rate and help others find the best loadouts!</p>
+                    <Button asChild variant="outline" size="sm">
+                      <Link to="/auth">Sign in to rate</Link>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">No daily loadout available yet.</div>
+          )}
+        </Card>
       </section>
 
       <section className="mt-12 grid gap-4 md:grid-cols-3">
@@ -85,6 +280,29 @@ function Home() {
         </section>
       )}
     </Page>
+  );
+}
+
+function RatingPicker({ value, onChange, color = "text-yellow-500" }: { value: number, onChange: (v: number) => void, color?: string }) {
+  const [hover, setHover] = useState(0);
+  
+  return (
+    <div className="flex gap-1">
+      {[1, 2, 3, 4, 5].map((star) => (
+        <button
+          key={star}
+          type="button"
+          onMouseEnter={() => setHover(star)}
+          onMouseLeave={() => setHover(0)}
+          onClick={() => onChange(star)}
+          className="transition-transform active:scale-90"
+        >
+          <Star 
+            className={`h-6 w-6 ${(hover || value) >= star ? `fill-current ${color}` : "text-muted-foreground/30"}`} 
+          />
+        </button>
+      ))}
+    </div>
   );
 }
 

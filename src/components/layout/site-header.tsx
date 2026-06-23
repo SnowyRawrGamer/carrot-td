@@ -1,5 +1,5 @@
 import { Link } from "@tanstack/react-router";
-import { Carrot, LogOut, Shield, User as UserIcon } from "lucide-react";
+import { Carrot, LogOut, Shield, User as UserIcon, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth, useMyRoles, isEditor } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
@@ -8,8 +8,8 @@ const navItems = [
   { to: "/units", label: "Units" },
   { to: "/summons", label: "Summons" },
   { to: "/chests", label: "Chests" },
-  { to: "/updates", label: "Updates" },
-  { to: "/loadouts", label: "Loadouts" },
+  { to: "/daily-vault", label: "Daily Vault" },
+  { to: "/loadouts", label: "Community" },
   { to: "/feedback", label: "Feedback" },
 ];
 
