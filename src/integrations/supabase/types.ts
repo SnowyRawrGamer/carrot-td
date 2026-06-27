@@ -927,14 +927,6 @@ export type Database = {
           public_name: string
         }[]
       }
-      has_role: {
-        Args: {
-          requested_role: Database["public"]["Enums"]["app_role"]
-          uid: string
-        }
-        Returns: boolean
-      }
-      is_staff: { Args: { uid: string }; Returns: boolean }
     }
     Enums: {
       app_role: "owner" | "editor" | "viewer"
