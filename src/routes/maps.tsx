@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { PageLayout } from "@/components/layout/page";
+import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
@@ -21,7 +21,7 @@ function MapsPage() {
   });
 
   return (
-    <PageLayout title="Maps">
+    <Page title="Maps">
       <div className="mb-8 text-center">
         <h1 className="text-4xl font-bold mb-4">Maps</h1>
         <p className="text-muted-foreground text-lg max-w-md mx-auto">
@@ -83,6 +83,6 @@ function MapsPage() {
           })}
         </div>
       )}
-    </PageLayout>
+    </Page>
   );
 }
