@@ -58,6 +58,20 @@ export function SiteHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          <DropdownMenu>
+            <DropdownMenuTrigger className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1 outline-none">
+              Other <ChevronDown className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem asChild>
+                <Link to="/maps">Maps</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/gamemodes">Gamemodes</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           {navItems.slice(3).map((n) => (
             <Link
               key={n.to}
