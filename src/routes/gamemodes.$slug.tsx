@@ -21,7 +21,7 @@ function GamemodeDetail() {
         .eq("slug", slug)
         .maybeSingle();
       if (error) throw error;
-      return data;
+      return data as any;
     },
   });
 
