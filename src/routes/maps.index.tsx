@@ -42,7 +42,7 @@ function MapsPage() {
                 <Card className="overflow-hidden h-full flex flex-col hover:border-primary/50 transition-colors cursor-pointer group">
                   <div className="aspect-[16/9] bg-muted relative">
                     {map.image_url ? (
-                      <img src={map.image_url} alt={map.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img src={map.image_url} alt={map.name} className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300" />
                     ) : (
                       <div className="h-full w-full grid place-items-center text-muted-foreground">
                         <MapIcon className="h-12 w-12" />
