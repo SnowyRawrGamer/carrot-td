@@ -1,15 +1,20 @@
 import { Link } from "@tanstack/react-router";
-import { Carrot, LogOut, Shield, User as UserIcon } from "lucide-react";
+import { Carrot, LogOut, Shield, User as UserIcon, ChevronDown } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth, useMyRoles, isEditor } from "@/lib/auth";
 import { supabase } from "@/integrations/supabase/client";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 
 const navItems = [
   { to: "/units", label: "Units" },
   { to: "/summons", label: "Summons" },
   { to: "/chests", label: "Chests" },
-  { to: "/daily-vault", label: "Daily Vault" },
-  { to: "/loadouts", label: "Loadouts" },
+  { to: "/updates", label: "Updates" },
   { to: "/feedback", label: "Feedback" },
 ];
 
@@ -28,7 +33,32 @@ export function SiteHeader() {
           <span>Carrot TD <span className="text-muted-foreground font-normal">Values</span></span>
         </Link>
         <nav className="hidden md:flex items-center gap-1">
-          {navItems.map((n) => (
+          {navItems.slice(0, 3).map((n) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
+              activeProps={{ className: "px-3 py-2 rounded-md text-sm font-medium text-foreground bg-accent" }}
+            >
+              {n.label}
+            </Link>
+          ))}
+
+          <DropdownMenu>
+            <DropdownMenuTrigger className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1 outline-none">
+              Loadouts <ChevronDown className="h-4 w-4" />
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem asChild>
+                <Link to="/loadouts">Loadout Maker</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/daily-vault">Daily Vault</Link>
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+
+          {navItems.slice(3).map((n) => (
             <Link
               key={n.to}
               to={n.to}
