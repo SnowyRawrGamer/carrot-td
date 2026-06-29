@@ -9,6 +9,7 @@ import { EditorsManager } from "@/components/admin/editors-manager";
 import { AuditLog } from "@/components/admin/audit-log";
 import { LoadoutsManager } from "@/components/admin/loadouts-manager";
 import { NotesManager } from "@/components/admin/notes-manager";
+import { SimpleManager } from "@/components/admin/simple-manager";
 import { Shield } from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/admin")({
@@ -43,16 +44,18 @@ function AdminPage() {
     <Page>
       <div className="mb-6">
         <h1 className="text-3xl font-bold">Admin</h1>
-        <p className="text-muted-foreground text-sm">Manage units, summons, chests{owner ? " and editors" : ""}.</p>
+        <p className="text-muted-foreground text-sm">Manage units, summons, chests, maps, and gamemodes{owner ? " and editors" : ""}.</p>
       </div>
       <Tabs defaultValue="units">
-        <TabsList>
+        <TabsList className="flex-wrap h-auto">
           <TabsTrigger value="units">Units</TabsTrigger>
           <TabsTrigger value="summons">Summons</TabsTrigger>
           <TabsTrigger value="chests">Chests</TabsTrigger>
           <TabsTrigger value="updates">Updates</TabsTrigger>
+          <TabsTrigger value="maps">Maps</TabsTrigger>
+          <TabsTrigger value="gamemodes">Gamemodes</TabsTrigger>
           <TabsTrigger value="loadouts">Loadouts</TabsTrigger>
-          <TabsTrigger value="notes">Notes & Ideas</TabsTrigger>
+          <TabsTrigger value="notes">Notes</TabsTrigger>
           {owner && <TabsTrigger value="editors">Editors</TabsTrigger>}
           {owner && <TabsTrigger value="logs">Logs</TabsTrigger>}
         </TabsList>
@@ -60,6 +63,8 @@ function AdminPage() {
         <TabsContent value="summons" className="mt-6"><PoolManager kind="summons" /></TabsContent>
         <TabsContent value="chests" className="mt-6"><PoolManager kind="chests" /></TabsContent>
         <TabsContent value="updates" className="mt-6"><UpdatesManager /></TabsContent>
+        <TabsContent value="maps" className="mt-6"><SimpleManager kind="maps" /></TabsContent>
+        <TabsContent value="gamemodes" className="mt-6"><SimpleManager kind="gamemodes" /></TabsContent>
         <TabsContent value="loadouts" className="mt-6"><LoadoutsManager /></TabsContent>
         <TabsContent value="notes" className="mt-6"><NotesManager /></TabsContent>
         {owner && <TabsContent value="editors" className="mt-6"><EditorsManager /></TabsContent>}
