@@ -58,6 +58,17 @@ export function SiteHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
+          {navItems.slice(3).map((n) => (
+            <Link
+              key={n.to}
+              to={n.to}
+              className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
+              activeProps={{ className: "px-3 py-2 rounded-md text-sm font-medium text-foreground bg-accent" }}
+            >
+              {n.label}
+            </Link>
+          ))}
+
           <DropdownMenu>
             <DropdownMenuTrigger className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1 outline-none">
               Other <ChevronDown className="h-4 w-4" />
@@ -71,17 +82,6 @@ export function SiteHeader() {
               </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
-
-          {navItems.slice(3).map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
-              activeProps={{ className: "px-3 py-2 rounded-md text-sm font-medium text-foreground bg-accent" }}
-            >
-              {n.label}
-            </Link>
-          ))}
         </nav>
         <div className="flex items-center gap-2">
           {editor && (
