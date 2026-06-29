@@ -116,9 +116,15 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
   const [unitIds, setUnitIds] = useState<string[]>([]);
   const [chestIds, setChestIds] = useState<string[]>([]);
   const [summonIds, setSummonIds] = useState<string[]>([]);
+  const [mapIds, setMapIds] = useState<string[]>([]);
+  const [gamemodeIds, setGamemodeIds] = useState<string[]>([]);
+  
   const [removedUnitIds, setRemovedUnitIds] = useState<string[]>([]);
   const [removedChestIds, setRemovedChestIds] = useState<string[]>([]);
   const [removedSummonIds, setRemovedSummonIds] = useState<string[]>([]);
+  const [removedMapIds, setRemovedMapIds] = useState<string[]>([]);
+  const [removedGamemodeIds, setRemovedGamemodeIds] = useState<string[]>([]);
+  
   const [loaded, setLoaded] = useState(!existing);
 
   const { data: units } = useQuery({
@@ -133,25 +139,37 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
     queryKey: ["all-summons-tiny"],
     queryFn: async () => (await supabase.from("summons").select("id, name, removed_update_id").order("name")).data || [],
   });
+  const { data: maps } = useQuery({
+    queryKey: ["all-maps-tiny"],
+    queryFn: async () => (await supabase.from("maps" as any).select("id, name, removed_update_id").order("name")).data || [],
+  });
+  const { data: gamemodes } = useQuery({
+    queryKey: ["all-gamemodes-tiny"],
+    queryFn: async () => (await supabase.from("gamemodes" as any).select("id, name, removed_update_id").order("name")).data || [],
+  });
 
   useQuery({
     queryKey: ["update-links", existing?.id],
     enabled: !!existing?.id,
     queryFn: async () => {
-      const [u, c, s] = await Promise.all([
+      const [u, c, s, m, g] = await Promise.all([
         supabase.from("update_units").select("unit_id").eq("update_id", existing.id),
         supabase.from("update_chests").select("chest_id").eq("update_id", existing.id),
         supabase.from("update_summons").select("summon_id").eq("update_id", existing.id),
+        supabase.from("update_maps" as any).select("map_id").eq("update_id", existing.id),
+        supabase.from("update_gamemodes" as any).select("gamemode_id").eq("update_id", existing.id),
       ]);
       setUnitIds((u.data || []).map((r: any) => r.unit_id));
       setChestIds((c.data || []).map((r: any) => r.chest_id));
       setSummonIds((s.data || []).map((r: any) => r.summon_id));
+      setMapIds((m.data || []).map((r: any) => r.map_id));
+      setGamemodeIds((g.data || []).map((r: any) => r.gamemode_id));
       setLoaded(true);
       return true;
     },
   });
 
-  // Once units/chests/summons load, pre-check whichever ones this update already marked as removed
+  // Once items load, pre-check whichever ones this update already marked as removed
   if (existing && loaded && units && removedUnitIds.length === 0) {
     const ids = units.filter((x: any) => x.removed_update_id === existing.id).map((x: any) => x.id);
     if (ids.length) setRemovedUnitIds(ids);
@@ -164,19 +182,27 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
     const ids = summons.filter((x: any) => x.removed_update_id === existing.id).map((x: any) => x.id);
     if (ids.length) setRemovedSummonIds(ids);
   }
+  if (existing && loaded && maps && removedMapIds.length === 0) {
+    const ids = maps.filter((x: any) => x.removed_update_id === existing.id).map((x: any) => x.id);
+    if (ids.length) setRemovedMapIds(ids);
+  }
+  if (existing && loaded && gamemodes && removedGamemodeIds.length === 0) {
+    const ids = gamemodes.filter((x: any) => x.removed_update_id === existing.id).map((x: any) => x.id);
+    if (ids.length) setRemovedGamemodeIds(ids);
+  }
 
   function autoSlug(v: string) { if (!slugTouched) setSlug(slugify(v)); setName(v); }
   function toggle(arr: string[], id: string, set: (v: string[]) => void) {
     set(arr.includes(id) ? arr.filter((x) => x !== id) : [...arr, id]);
   }
 
-  async function syncRemoved(table: "units" | "chests" | "summons", currentlyMarkedHere: string[], updateId: string) {
+  async function syncRemoved(table: string, currentlyMarkedHere: string[], updateId: string) {
     // Anything checked now -> mark as removed by this update
     if (currentlyMarkedHere.length) {
-      await supabase.from(table).update({ removed_update_id: updateId }).in("id", currentlyMarkedHere);
+      await supabase.from(table as any).update({ removed_update_id: updateId }).in("id", currentlyMarkedHere);
     }
     // Anything that WAS marked removed by this update but is no longer checked -> clear it
-    await supabase.from(table).update({ removed_update_id: null }).eq("removed_update_id", updateId).not("id", "in", `(${currentlyMarkedHere.length ? currentlyMarkedHere.map((x) => `"${x}"`).join(",") : "00000000-0000-0000-0000-000000000000"})`);
+    await supabase.from(table as any).update({ removed_update_id: null }).eq("removed_update_id", updateId).not("id", "in", `(${currentlyMarkedHere.length ? currentlyMarkedHere.map((x) => `"${x}"`).join(",") : "00000000-0000-0000-0000-000000000000"})`);
   }
 
   const save = useMutation({
@@ -196,6 +222,8 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
         await supabase.from("update_units").delete().eq("update_id", id);
         await supabase.from("update_chests").delete().eq("update_id", id);
         await supabase.from("update_summons").delete().eq("update_id", id);
+        await supabase.from("update_maps" as any).delete().eq("update_id", id);
+        await supabase.from("update_gamemodes" as any).delete().eq("update_id", id);
       } else {
         const { data, error } = await supabase.from("updates").insert(payload).select("id").single();
         if (error) throw error;
@@ -204,10 +232,14 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
       if (unitIds.length) await supabase.from("update_units").insert(unitIds.map((unit_id) => ({ update_id: id, unit_id })));
       if (chestIds.length) await supabase.from("update_chests").insert(chestIds.map((chest_id) => ({ update_id: id, chest_id })));
       if (summonIds.length) await supabase.from("update_summons").insert(summonIds.map((summon_id) => ({ update_id: id, summon_id })));
+      if (mapIds.length) await supabase.from("update_maps" as any).insert(mapIds.map((map_id) => ({ update_id: id, map_id })));
+      if (gamemodeIds.length) await supabase.from("update_gamemodes" as any).insert(gamemodeIds.map((gamemode_id) => ({ update_id: id, gamemode_id })));
 
       await syncRemoved("units", removedUnitIds, id);
       await syncRemoved("chests", removedChestIds, id);
       await syncRemoved("summons", removedSummonIds, id);
+      await syncRemoved("maps", removedMapIds, id);
+      await syncRemoved("gamemodes", removedGamemodeIds, id);
     },
     onSuccess: () => {
       toast.success("Saved");
@@ -216,6 +248,8 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
       qc.invalidateQueries({ queryKey: ["unit"] });
       qc.invalidateQueries({ queryKey: ["chest"] });
       qc.invalidateQueries({ queryKey: ["summon"] });
+      qc.invalidateQueries({ queryKey: ["maps"] });
+      qc.invalidateQueries({ queryKey: ["gamemodes"] });
       qc.invalidateQueries({ queryKey: ["units", "all"] });
       onDone();
     },
@@ -234,15 +268,19 @@ function UpdateForm({ existing, onDone }: { existing?: any; onDone: () => void }
         <div className="md:col-span-2"><Label>Description</Label><Textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} /></div>
       </div>
 
-      <p className="text-xs text-muted-foreground border-t pt-3">Items added in this update:</p>
+      <p className="text-xs text-muted-foreground border-t pt-3 font-bold uppercase tracking-wider">Items added in this update:</p>
       <CheckList title="Units added" count={unitIds.length} items={units || []} selected={unitIds} onToggle={(id) => toggle(unitIds, id, setUnitIds)} />
       <CheckList title="Summons added" count={summonIds.length} items={summons || []} selected={summonIds} onToggle={(id) => toggle(summonIds, id, setSummonIds)} />
       <CheckList title="Chests added" count={chestIds.length} items={chests || []} selected={chestIds} onToggle={(id) => toggle(chestIds, id, setChestIds)} />
+      <CheckList title="Maps added" count={mapIds.length} items={maps || []} selected={mapIds} onToggle={(id) => toggle(mapIds, id, setMapIds)} />
+      <CheckList title="Gamemodes added" count={gamemodeIds.length} items={gamemodes || []} selected={gamemodeIds} onToggle={(id) => toggle(gamemodeIds, id, setGamemodeIds)} />
 
-      <p className="text-xs text-muted-foreground border-t pt-3">Items removed in this update (units stay tradeable even when removed):</p>
+      <p className="text-xs text-muted-foreground border-t pt-3 font-bold uppercase tracking-wider">Items removed in this update:</p>
       <CheckList title="Units removed" count={removedUnitIds.length} items={units || []} selected={removedUnitIds} onToggle={(id) => toggle(removedUnitIds, id, setRemovedUnitIds)} />
       <CheckList title="Summons removed" count={removedSummonIds.length} items={summons || []} selected={removedSummonIds} onToggle={(id) => toggle(removedSummonIds, id, setRemovedSummonIds)} />
       <CheckList title="Chests removed" count={removedChestIds.length} items={chests || []} selected={removedChestIds} onToggle={(id) => toggle(removedChestIds, id, setRemovedChestIds)} />
+      <CheckList title="Maps removed" count={removedMapIds.length} items={maps || []} selected={removedMapIds} onToggle={(id) => toggle(removedMapIds, id, setRemovedMapIds)} />
+      <CheckList title="Gamemodes removed" count={removedGamemodeIds.length} items={gamemodes || []} selected={removedGamemodeIds} onToggle={(id) => toggle(removedGamemodeIds, id, setRemovedGamemodeIds)} />
 
       <div className="flex gap-2 justify-end">
         <Button variant="outline" onClick={onDone}>Cancel</Button>
