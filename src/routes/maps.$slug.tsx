@@ -42,7 +42,7 @@ function MapDetail() {
           <Card className="overflow-hidden p-0">
             <div className="aspect-video bg-muted relative">
               {map.image_url ? (
-                <img src={map.image_url} alt={map.name} className="h-full w-full object-cover" />
+                <img src={map.image_url} alt={map.name} className="h-full w-full object-contain" />
               ) : (
                 <div className="h-full w-full grid place-items-center text-muted-foreground">
                   <MapIcon className="h-12 w-12" />
@@ -74,7 +74,7 @@ function MapDetail() {
               <div className="grid gap-4 sm:grid-cols-2">
                 {map.gallery_urls.map((url: string, i: number) => (
                   <div key={i} className="aspect-video rounded-lg overflow-hidden bg-muted border">
-                    <img src={url} alt={`${map.name} gallery ${i + 1}`} className="h-full w-full object-cover hover:scale-105 transition-transform duration-300" />
+                    <img src={url} alt={`${map.name} gallery ${i + 1}`} className="h-full w-full object-contain hover:scale-105 transition-transform duration-300" />
                   </div>
                 ))}
               </div>
