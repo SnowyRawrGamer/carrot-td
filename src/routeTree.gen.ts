@@ -9,6 +9,8 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as MapsRouteImport } from './routes/maps'
+import { Route as GamemodesRouteImport } from './routes/gamemodes'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as DailyVaultRouteImport } from './routes/daily-vault'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -28,6 +30,16 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as LoadoutsCommunityIndexRouteImport } from './routes/loadouts.community.index'
 import { Route as LoadoutsCommunityIdRouteImport } from './routes/loadouts.community.$id'
 
+const MapsRoute = MapsRouteImport.update({
+  id: '/maps',
+  path: '/maps',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamemodesRoute = GamemodesRouteImport.update({
+  id: '/gamemodes',
+  path: '/gamemodes',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FeedbackRoute = FeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
@@ -123,6 +135,8 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
+  '/gamemodes': typeof GamemodesRoute
+  '/maps': typeof MapsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
@@ -142,6 +156,8 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
+  '/gamemodes': typeof GamemodesRoute
+  '/maps': typeof MapsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
@@ -163,6 +179,8 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
+  '/gamemodes': typeof GamemodesRoute
+  '/maps': typeof MapsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
@@ -184,6 +202,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
+    | '/gamemodes'
+    | '/maps'
     | '/admin'
     | '/chests/$slug'
     | '/summons/$slug'
@@ -203,6 +223,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
+    | '/gamemodes'
+    | '/maps'
     | '/admin'
     | '/chests/$slug'
     | '/summons/$slug'
@@ -223,6 +245,8 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
+    | '/gamemodes'
+    | '/maps'
     | '/_authenticated/admin'
     | '/chests/$slug'
     | '/summons/$slug'
@@ -244,6 +268,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DailyVaultRoute: typeof DailyVaultRoute
   FeedbackRoute: typeof FeedbackRoute
+  GamemodesRoute: typeof GamemodesRoute
+  MapsRoute: typeof MapsRoute
   ChestsSlugRoute: typeof ChestsSlugRoute
   SummonsSlugRoute: typeof SummonsSlugRoute
   UnitsSlugRoute: typeof UnitsSlugRoute
@@ -260,6 +286,20 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/maps': {
+      id: '/maps'
+      path: '/maps'
+      fullPath: '/maps'
+      preLoaderRoute: typeof MapsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gamemodes': {
+      id: '/gamemodes'
+      path: '/gamemodes'
+      fullPath: '/gamemodes'
+      preLoaderRoute: typeof GamemodesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/feedback': {
       id: '/feedback'
       path: '/feedback'
@@ -406,6 +446,8 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DailyVaultRoute: DailyVaultRoute,
   FeedbackRoute: FeedbackRoute,
+  GamemodesRoute: GamemodesRoute,
+  MapsRoute: MapsRoute,
   ChestsSlugRoute: ChestsSlugRoute,
   SummonsSlugRoute: SummonsSlugRoute,
   UnitsSlugRoute: UnitsSlugRoute,
@@ -422,3 +464,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
