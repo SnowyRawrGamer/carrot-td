@@ -75,7 +75,7 @@ function UpdateDetail() {
     }
 
     return (
-      <Link key={item.id} to={to as any} params={type === 'map' || type === 'gamemode' ? undefined : { slug: item.slug }}
+      <Link key={item.id} to={to as any} {...((type === 'map' || type === 'gamemode') ? {} : { params: { slug: item.slug } as any })}
         className="rounded-lg border bg-muted/30 p-2 text-center hover:border-primary/40 transition flex flex-col">
         <div className={`${aspect} w-full rounded-md bg-muted overflow-hidden mb-2`}>
           {img ? <img src={img} alt="" className="h-full w-full object-contain" /> :
