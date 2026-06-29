@@ -1,6 +1,6 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Calendar, Play } from "lucide-react";
+import { ArrowLeft, Calendar, Play, Image as ImageIcon } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
@@ -65,6 +65,21 @@ function GamemodeDetail() {
               )}
             </div>
           </Card>
+
+          {mode.gallery_urls && mode.gallery_urls.length > 0 && (
+            <Card className="p-6">
+              <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                <ImageIcon className="h-5 w-5" /> Gallery
+              </h2>
+              <div className="grid gap-4 sm:grid-cols-2">
+                {mode.gallery_urls.map((url: string, i: number) => (
+                  <div key={i} className="aspect-video rounded-lg overflow-hidden bg-muted border">
+                    <img src={url} alt={`${mode.name} gallery ${i + 1}`} className="h-full w-full object-cover hover:scale-105 transition-transform duration-300" />
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
 
         <div className="space-y-6">

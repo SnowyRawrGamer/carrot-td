@@ -134,11 +134,8 @@ function SimpleForm({ kind, existing, onDone }: { kind: "maps" | "gamemodes"; ex
         image_url: imageUrl.trim() || null,
         description: description.trim() || null,
         updated_at: new Date().toISOString(),
+        gallery_urls: galleryUrls.filter(u => u.trim() !== ""),
       };
-
-      if (kind === "maps") {
-        payload.gallery_urls = galleryUrls.filter(u => u.trim() !== "");
-      }
 
       if (existing?.id) {
         const { error } = await supabase.from(kind as any).update(payload).eq("id", existing.id);
@@ -177,24 +174,22 @@ function SimpleForm({ kind, existing, onDone }: { kind: "maps" | "gamemodes"; ex
         <Textarea rows={4} value={description} onChange={(e) => setDescription(e.target.value)} placeholder="Describe this..." />
       </div>
 
-      {kind === "maps" && (
-        <div className="space-y-2 border-t pt-4">
-          <Label>Gallery / Additional Image URLs</Label>
-          <div className="space-y-2">
-            {galleryUrls.map((url, i) => (
-              <div key={i} className="flex gap-2">
-                <Input value={url} onChange={(e) => setGalleryUrls(cur => cur.map((u, j) => i === j ? e.target.value : u))} placeholder="https://..." />
-                <Button variant="ghost" size="icon" onClick={() => setGalleryUrls(cur => cur.filter((_, j) => i !== j))}>
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              </div>
-            ))}
-            <Button variant="outline" size="sm" onClick={() => setGalleryUrls(cur => [...cur, ""])}>
-              <Plus className="h-4 w-4 mr-1" /> Add Image
-            </Button>
-          </div>
+      <div className="space-y-2 border-t pt-4">
+        <Label>Gallery / Additional Image URLs</Label>
+        <div className="space-y-2">
+          {galleryUrls.map((url, i) => (
+            <div key={i} className="flex gap-2">
+              <Input value={url} onChange={(e) => setGalleryUrls(cur => cur.map((u, j) => i === j ? e.target.value : u))} placeholder="https://..." />
+              <Button variant="ghost" size="icon" onClick={() => setGalleryUrls(cur => cur.filter((_, j) => i !== j))}>
+                <Trash2 className="h-4 w-4" />
+              </Button>
+            </div>
+          ))}
+          <Button variant="outline" size="sm" onClick={() => setGalleryUrls(cur => [...cur, ""])}>
+            <Plus className="h-4 w-4 mr-1" /> Add Image
+          </Button>
         </div>
-      )}
+      </div>
 
       <div className="flex justify-end gap-2 pt-4">
         <Button variant="outline" onClick={onDone}>Cancel</Button>
