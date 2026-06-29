@@ -25,6 +25,8 @@ import { Route as ChestsIndexRouteImport } from './routes/chests.index'
 import { Route as UpdatesSlugRouteImport } from './routes/updates.$slug'
 import { Route as UnitsSlugRouteImport } from './routes/units.$slug'
 import { Route as SummonsSlugRouteImport } from './routes/summons.$slug'
+import { Route as MapsSlugRouteImport } from './routes/maps.$slug'
+import { Route as GamemodesSlugRouteImport } from './routes/gamemodes.$slug'
 import { Route as ChestsSlugRouteImport } from './routes/chests.$slug'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as LoadoutsCommunityIndexRouteImport } from './routes/loadouts.community.index'
@@ -109,6 +111,16 @@ const SummonsSlugRoute = SummonsSlugRouteImport.update({
   path: '/summons/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MapsSlugRoute = MapsSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => MapsRoute,
+} as any)
+const GamemodesSlugRoute = GamemodesSlugRouteImport.update({
+  id: '/$slug',
+  path: '/$slug',
+  getParentRoute: () => GamemodesRoute,
+} as any)
 const ChestsSlugRoute = ChestsSlugRouteImport.update({
   id: '/chests/$slug',
   path: '/chests/$slug',
@@ -135,10 +147,12 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
-  '/gamemodes': typeof GamemodesRoute
-  '/maps': typeof MapsRoute
+  '/gamemodes': typeof GamemodesRouteWithChildren
+  '/maps': typeof MapsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
+  '/gamemodes/$slug': typeof GamemodesSlugRoute
+  '/maps/$slug': typeof MapsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -156,10 +170,12 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
-  '/gamemodes': typeof GamemodesRoute
-  '/maps': typeof MapsRoute
+  '/gamemodes': typeof GamemodesRouteWithChildren
+  '/maps': typeof MapsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
+  '/gamemodes/$slug': typeof GamemodesSlugRoute
+  '/maps/$slug': typeof MapsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -179,10 +195,12 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
-  '/gamemodes': typeof GamemodesRoute
-  '/maps': typeof MapsRoute
+  '/gamemodes': typeof GamemodesRouteWithChildren
+  '/maps': typeof MapsRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
+  '/gamemodes/$slug': typeof GamemodesSlugRoute
+  '/maps/$slug': typeof MapsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
   '/units/$slug': typeof UnitsSlugRoute
   '/updates/$slug': typeof UpdatesSlugRoute
@@ -206,6 +224,8 @@ export interface FileRouteTypes {
     | '/maps'
     | '/admin'
     | '/chests/$slug'
+    | '/gamemodes/$slug'
+    | '/maps/$slug'
     | '/summons/$slug'
     | '/units/$slug'
     | '/updates/$slug'
@@ -227,6 +247,8 @@ export interface FileRouteTypes {
     | '/maps'
     | '/admin'
     | '/chests/$slug'
+    | '/gamemodes/$slug'
+    | '/maps/$slug'
     | '/summons/$slug'
     | '/units/$slug'
     | '/updates/$slug'
@@ -249,6 +271,8 @@ export interface FileRouteTypes {
     | '/maps'
     | '/_authenticated/admin'
     | '/chests/$slug'
+    | '/gamemodes/$slug'
+    | '/maps/$slug'
     | '/summons/$slug'
     | '/units/$slug'
     | '/updates/$slug'
@@ -268,8 +292,8 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DailyVaultRoute: typeof DailyVaultRoute
   FeedbackRoute: typeof FeedbackRoute
-  GamemodesRoute: typeof GamemodesRoute
-  MapsRoute: typeof MapsRoute
+  GamemodesRoute: typeof GamemodesRouteWithChildren
+  MapsRoute: typeof MapsRouteWithChildren
   ChestsSlugRoute: typeof ChestsSlugRoute
   SummonsSlugRoute: typeof SummonsSlugRoute
   UnitsSlugRoute: typeof UnitsSlugRoute
@@ -398,6 +422,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SummonsSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maps/$slug': {
+      id: '/maps/$slug'
+      path: '/$slug'
+      fullPath: '/maps/$slug'
+      preLoaderRoute: typeof MapsSlugRouteImport
+      parentRoute: typeof MapsRoute
+    }
+    '/gamemodes/$slug': {
+      id: '/gamemodes/$slug'
+      path: '/$slug'
+      fullPath: '/gamemodes/$slug'
+      preLoaderRoute: typeof GamemodesSlugRouteImport
+      parentRoute: typeof GamemodesRoute
+    }
     '/chests/$slug': {
       id: '/chests/$slug'
       path: '/chests/$slug'
@@ -440,14 +478,36 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
+interface GamemodesRouteChildren {
+  GamemodesSlugRoute: typeof GamemodesSlugRoute
+}
+
+const GamemodesRouteChildren: GamemodesRouteChildren = {
+  GamemodesSlugRoute: GamemodesSlugRoute,
+}
+
+const GamemodesRouteWithChildren = GamemodesRoute._addFileChildren(
+  GamemodesRouteChildren,
+)
+
+interface MapsRouteChildren {
+  MapsSlugRoute: typeof MapsSlugRoute
+}
+
+const MapsRouteChildren: MapsRouteChildren = {
+  MapsSlugRoute: MapsSlugRoute,
+}
+
+const MapsRouteWithChildren = MapsRoute._addFileChildren(MapsRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   DailyVaultRoute: DailyVaultRoute,
   FeedbackRoute: FeedbackRoute,
-  GamemodesRoute: GamemodesRoute,
-  MapsRoute: MapsRoute,
+  GamemodesRoute: GamemodesRouteWithChildren,
+  MapsRoute: MapsRouteWithChildren,
   ChestsSlugRoute: ChestsSlugRoute,
   SummonsSlugRoute: SummonsSlugRoute,
   UnitsSlugRoute: UnitsSlugRoute,
@@ -464,3 +524,13 @@ const rootRouteChildren: RootRouteChildren = {
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
+
+import type { getRouter } from './router.tsx'
+import type { startInstance } from './start.ts'
+declare module '@tanstack/react-start' {
+  interface Register {
+    ssr: true
+    router: Awaited<ReturnType<typeof getRouter>>
+    config: Awaited<ReturnType<typeof startInstance.getOptions>>
+  }
+}
