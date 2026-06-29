@@ -359,6 +359,91 @@ export type Database = {
         }
         Relationships: []
       }
+      gamemodes: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          image_url: string | null
+          name: string
+          removed_update_id: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name: string
+          removed_update_id?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          image_url?: string | null
+          name?: string
+          removed_update_id?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gamemodes_removed_update_id_fkey"
+            columns: ["removed_update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      maps: {
+        Row: {
+          created_at: string
+          description: string | null
+          gallery_urls: Json
+          id: string
+          image_url: string | null
+          name: string
+          removed_update_id: string | null
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          gallery_urls?: Json
+          id?: string
+          image_url?: string | null
+          name: string
+          removed_update_id?: string | null
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          gallery_urls?: Json
+          id?: string
+          image_url?: string | null
+          name?: string
+          removed_update_id?: string | null
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "maps_removed_update_id_fkey"
+            columns: ["removed_update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -750,6 +835,66 @@ export type Database = {
           },
           {
             foreignKeyName: "update_chests_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      update_gamemodes: {
+        Row: {
+          gamemode_id: string
+          update_id: string
+        }
+        Insert: {
+          gamemode_id: string
+          update_id: string
+        }
+        Update: {
+          gamemode_id?: string
+          update_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "update_gamemodes_gamemode_id_fkey"
+            columns: ["gamemode_id"]
+            isOneToOne: false
+            referencedRelation: "gamemodes"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "update_gamemodes_update_id_fkey"
+            columns: ["update_id"]
+            isOneToOne: false
+            referencedRelation: "updates"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      update_maps: {
+        Row: {
+          map_id: string
+          update_id: string
+        }
+        Insert: {
+          map_id: string
+          update_id: string
+        }
+        Update: {
+          map_id?: string
+          update_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "update_maps_map_id_fkey"
+            columns: ["map_id"]
+            isOneToOne: false
+            referencedRelation: "maps"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "update_maps_update_id_fkey"
             columns: ["update_id"]
             isOneToOne: false
             referencedRelation: "updates"
