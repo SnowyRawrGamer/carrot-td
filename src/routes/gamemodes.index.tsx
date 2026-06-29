@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Play, Calendar } from "lucide-react";
 
-export const Route = createFileRoute("/gamemodes")({
+export const Route = createFileRoute("/gamemodes/")({
   component: GamemodesPage,
 });
 

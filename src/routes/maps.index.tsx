@@ -6,7 +6,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { Badge } from "@/components/ui/badge";
 import { Map as MapIcon, Calendar } from "lucide-react";
 
-export const Route = createFileRoute("/maps")({
+export const Route = createFileRoute("/maps/")({
   component: MapsPage,
 });
 

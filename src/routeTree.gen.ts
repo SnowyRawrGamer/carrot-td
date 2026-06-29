@@ -9,8 +9,6 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as MapsRouteImport } from './routes/maps'
-import { Route as GamemodesRouteImport } from './routes/gamemodes'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as DailyVaultRouteImport } from './routes/daily-vault'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -19,7 +17,9 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as UpdatesIndexRouteImport } from './routes/updates.index'
 import { Route as UnitsIndexRouteImport } from './routes/units.index'
 import { Route as SummonsIndexRouteImport } from './routes/summons.index'
+import { Route as MapsIndexRouteImport } from './routes/maps.index'
 import { Route as LoadoutsIndexRouteImport } from './routes/loadouts.index'
+import { Route as GamemodesIndexRouteImport } from './routes/gamemodes.index'
 import { Route as EditorsIndexRouteImport } from './routes/editors.index'
 import { Route as ChestsIndexRouteImport } from './routes/chests.index'
 import { Route as UpdatesSlugRouteImport } from './routes/updates.$slug'
@@ -32,16 +32,6 @@ import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/
 import { Route as LoadoutsCommunityIndexRouteImport } from './routes/loadouts.community.index'
 import { Route as LoadoutsCommunityIdRouteImport } from './routes/loadouts.community.$id'
 
-const MapsRoute = MapsRouteImport.update({
-  id: '/maps',
-  path: '/maps',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const GamemodesRoute = GamemodesRouteImport.update({
-  id: '/gamemodes',
-  path: '/gamemodes',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const FeedbackRoute = FeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
@@ -81,9 +71,19 @@ const SummonsIndexRoute = SummonsIndexRouteImport.update({
   path: '/summons/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const MapsIndexRoute = MapsIndexRouteImport.update({
+  id: '/maps/',
+  path: '/maps/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const LoadoutsIndexRoute = LoadoutsIndexRouteImport.update({
   id: '/loadouts/',
   path: '/loadouts/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const GamemodesIndexRoute = GamemodesIndexRouteImport.update({
+  id: '/gamemodes/',
+  path: '/gamemodes/',
   getParentRoute: () => rootRouteImport,
 } as any)
 const EditorsIndexRoute = EditorsIndexRouteImport.update({
@@ -112,14 +112,14 @@ const SummonsSlugRoute = SummonsSlugRouteImport.update({
   getParentRoute: () => rootRouteImport,
 } as any)
 const MapsSlugRoute = MapsSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => MapsRoute,
+  id: '/maps/$slug',
+  path: '/maps/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const GamemodesSlugRoute = GamemodesSlugRouteImport.update({
-  id: '/$slug',
-  path: '/$slug',
-  getParentRoute: () => GamemodesRoute,
+  id: '/gamemodes/$slug',
+  path: '/gamemodes/$slug',
+  getParentRoute: () => rootRouteImport,
 } as any)
 const ChestsSlugRoute = ChestsSlugRouteImport.update({
   id: '/chests/$slug',
@@ -147,8 +147,6 @@ export interface FileRoutesByFullPath {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
-  '/gamemodes': typeof GamemodesRouteWithChildren
-  '/maps': typeof MapsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/gamemodes/$slug': typeof GamemodesSlugRoute
@@ -158,7 +156,9 @@ export interface FileRoutesByFullPath {
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests/': typeof ChestsIndexRoute
   '/editors/': typeof EditorsIndexRoute
+  '/gamemodes/': typeof GamemodesIndexRoute
   '/loadouts/': typeof LoadoutsIndexRoute
+  '/maps/': typeof MapsIndexRoute
   '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
   '/updates/': typeof UpdatesIndexRoute
@@ -170,8 +170,6 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
-  '/gamemodes': typeof GamemodesRouteWithChildren
-  '/maps': typeof MapsRouteWithChildren
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/gamemodes/$slug': typeof GamemodesSlugRoute
@@ -181,7 +179,9 @@ export interface FileRoutesByTo {
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests': typeof ChestsIndexRoute
   '/editors': typeof EditorsIndexRoute
+  '/gamemodes': typeof GamemodesIndexRoute
   '/loadouts': typeof LoadoutsIndexRoute
+  '/maps': typeof MapsIndexRoute
   '/summons': typeof SummonsIndexRoute
   '/units': typeof UnitsIndexRoute
   '/updates': typeof UpdatesIndexRoute
@@ -195,8 +195,6 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
-  '/gamemodes': typeof GamemodesRouteWithChildren
-  '/maps': typeof MapsRouteWithChildren
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
   '/gamemodes/$slug': typeof GamemodesSlugRoute
@@ -206,7 +204,9 @@ export interface FileRoutesById {
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests/': typeof ChestsIndexRoute
   '/editors/': typeof EditorsIndexRoute
+  '/gamemodes/': typeof GamemodesIndexRoute
   '/loadouts/': typeof LoadoutsIndexRoute
+  '/maps/': typeof MapsIndexRoute
   '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
   '/updates/': typeof UpdatesIndexRoute
@@ -220,8 +220,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
-    | '/gamemodes'
-    | '/maps'
     | '/admin'
     | '/chests/$slug'
     | '/gamemodes/$slug'
@@ -231,7 +229,9 @@ export interface FileRouteTypes {
     | '/updates/$slug'
     | '/chests/'
     | '/editors/'
+    | '/gamemodes/'
     | '/loadouts/'
+    | '/maps/'
     | '/summons/'
     | '/units/'
     | '/updates/'
@@ -243,8 +243,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
-    | '/gamemodes'
-    | '/maps'
     | '/admin'
     | '/chests/$slug'
     | '/gamemodes/$slug'
@@ -254,7 +252,9 @@ export interface FileRouteTypes {
     | '/updates/$slug'
     | '/chests'
     | '/editors'
+    | '/gamemodes'
     | '/loadouts'
+    | '/maps'
     | '/summons'
     | '/units'
     | '/updates'
@@ -267,8 +267,6 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
-    | '/gamemodes'
-    | '/maps'
     | '/_authenticated/admin'
     | '/chests/$slug'
     | '/gamemodes/$slug'
@@ -278,7 +276,9 @@ export interface FileRouteTypes {
     | '/updates/$slug'
     | '/chests/'
     | '/editors/'
+    | '/gamemodes/'
     | '/loadouts/'
+    | '/maps/'
     | '/summons/'
     | '/units/'
     | '/updates/'
@@ -292,15 +292,17 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DailyVaultRoute: typeof DailyVaultRoute
   FeedbackRoute: typeof FeedbackRoute
-  GamemodesRoute: typeof GamemodesRouteWithChildren
-  MapsRoute: typeof MapsRouteWithChildren
   ChestsSlugRoute: typeof ChestsSlugRoute
+  GamemodesSlugRoute: typeof GamemodesSlugRoute
+  MapsSlugRoute: typeof MapsSlugRoute
   SummonsSlugRoute: typeof SummonsSlugRoute
   UnitsSlugRoute: typeof UnitsSlugRoute
   UpdatesSlugRoute: typeof UpdatesSlugRoute
   ChestsIndexRoute: typeof ChestsIndexRoute
   EditorsIndexRoute: typeof EditorsIndexRoute
+  GamemodesIndexRoute: typeof GamemodesIndexRoute
   LoadoutsIndexRoute: typeof LoadoutsIndexRoute
+  MapsIndexRoute: typeof MapsIndexRoute
   SummonsIndexRoute: typeof SummonsIndexRoute
   UnitsIndexRoute: typeof UnitsIndexRoute
   UpdatesIndexRoute: typeof UpdatesIndexRoute
@@ -310,20 +312,6 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/maps': {
-      id: '/maps'
-      path: '/maps'
-      fullPath: '/maps'
-      preLoaderRoute: typeof MapsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/gamemodes': {
-      id: '/gamemodes'
-      path: '/gamemodes'
-      fullPath: '/gamemodes'
-      preLoaderRoute: typeof GamemodesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
     '/feedback': {
       id: '/feedback'
       path: '/feedback'
@@ -380,11 +368,25 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof SummonsIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/maps/': {
+      id: '/maps/'
+      path: '/maps'
+      fullPath: '/maps/'
+      preLoaderRoute: typeof MapsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/loadouts/': {
       id: '/loadouts/'
       path: '/loadouts'
       fullPath: '/loadouts/'
       preLoaderRoute: typeof LoadoutsIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/gamemodes/': {
+      id: '/gamemodes/'
+      path: '/gamemodes'
+      fullPath: '/gamemodes/'
+      preLoaderRoute: typeof GamemodesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/editors/': {
@@ -424,17 +426,17 @@ declare module '@tanstack/react-router' {
     }
     '/maps/$slug': {
       id: '/maps/$slug'
-      path: '/$slug'
+      path: '/maps/$slug'
       fullPath: '/maps/$slug'
       preLoaderRoute: typeof MapsSlugRouteImport
-      parentRoute: typeof MapsRoute
+      parentRoute: typeof rootRouteImport
     }
     '/gamemodes/$slug': {
       id: '/gamemodes/$slug'
-      path: '/$slug'
+      path: '/gamemodes/$slug'
       fullPath: '/gamemodes/$slug'
       preLoaderRoute: typeof GamemodesSlugRouteImport
-      parentRoute: typeof GamemodesRoute
+      parentRoute: typeof rootRouteImport
     }
     '/chests/$slug': {
       id: '/chests/$slug'
@@ -478,43 +480,23 @@ const AuthenticatedRouteRouteChildren: AuthenticatedRouteRouteChildren = {
 const AuthenticatedRouteRouteWithChildren =
   AuthenticatedRouteRoute._addFileChildren(AuthenticatedRouteRouteChildren)
 
-interface GamemodesRouteChildren {
-  GamemodesSlugRoute: typeof GamemodesSlugRoute
-}
-
-const GamemodesRouteChildren: GamemodesRouteChildren = {
-  GamemodesSlugRoute: GamemodesSlugRoute,
-}
-
-const GamemodesRouteWithChildren = GamemodesRoute._addFileChildren(
-  GamemodesRouteChildren,
-)
-
-interface MapsRouteChildren {
-  MapsSlugRoute: typeof MapsSlugRoute
-}
-
-const MapsRouteChildren: MapsRouteChildren = {
-  MapsSlugRoute: MapsSlugRoute,
-}
-
-const MapsRouteWithChildren = MapsRoute._addFileChildren(MapsRouteChildren)
-
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AuthenticatedRouteRoute: AuthenticatedRouteRouteWithChildren,
   AuthRoute: AuthRoute,
   DailyVaultRoute: DailyVaultRoute,
   FeedbackRoute: FeedbackRoute,
-  GamemodesRoute: GamemodesRouteWithChildren,
-  MapsRoute: MapsRouteWithChildren,
   ChestsSlugRoute: ChestsSlugRoute,
+  GamemodesSlugRoute: GamemodesSlugRoute,
+  MapsSlugRoute: MapsSlugRoute,
   SummonsSlugRoute: SummonsSlugRoute,
   UnitsSlugRoute: UnitsSlugRoute,
   UpdatesSlugRoute: UpdatesSlugRoute,
   ChestsIndexRoute: ChestsIndexRoute,
   EditorsIndexRoute: EditorsIndexRoute,
+  GamemodesIndexRoute: GamemodesIndexRoute,
   LoadoutsIndexRoute: LoadoutsIndexRoute,
+  MapsIndexRoute: MapsIndexRoute,
   SummonsIndexRoute: SummonsIndexRoute,
   UnitsIndexRoute: UnitsIndexRoute,
   UpdatesIndexRoute: UpdatesIndexRoute,
