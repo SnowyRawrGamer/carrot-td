@@ -42,7 +42,7 @@ function GamemodesPage() {
                 <Card className="overflow-hidden h-full flex flex-col hover:border-primary/50 transition-colors cursor-pointer group">
                   <div className="aspect-[16/9] bg-muted relative">
                     {mode.image_url ? (
-                      <img src={mode.image_url} alt={mode.name} className="h-full w-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                      <img src={mode.image_url} alt={mode.name} className="h-full w-full object-contain group-hover:scale-105 transition-transform duration-300" />
                     ) : (
                       <div className="h-full w-full grid place-items-center text-muted-foreground">
                         <Play className="h-12 w-12" />
