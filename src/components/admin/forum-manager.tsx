@@ -185,8 +185,10 @@ function UsersPanel() {
   const { data: roles } = useQuery({
     queryKey: ["forum-user-roles"],
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("id, username, trust_level, help_points, forum_banned_until, forum_ban_reason").order("help_points", { ascending: false });
-      return data || [];
+      const { data: profs } = await supabase.from("profiles").select("id, username, trust_level, help_points").order("help_points", { ascending: false });
+      const { data: mods } = await supabase.from("profile_moderation").select("user_id, forum_banned_until, forum_ban_reason");
+      const modMap = new Map((mods || []).map((m: any) => [m.user_id, m]));
+      return (profs || []).map((p: any) => ({ ...p, forum_banned_until: modMap.get(p.id)?.forum_banned_until ?? null, forum_ban_reason: modMap.get(p.id)?.forum_ban_reason ?? null }));
     },
   });
 
@@ -203,7 +205,7 @@ function UsersPanel() {
     mutationFn: async () => {
       if (!banTarget) return;
       const until = banDays === "0" || banDays === "" ? "infinity" : new Date(Date.now() + Number(banDays) * 86400000).toISOString();
-      const { error } = await supabase.from("profiles").update({ forum_banned_until: until, forum_ban_reason: banReason.trim() || null }).eq("id", banTarget.id);
+      const { error } = await supabase.from("profile_moderation").upsert({ user_id: banTarget.id, forum_banned_until: until, forum_ban_reason: banReason.trim() || null });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Ban applied"); setBanTarget(null); setBanDays(""); setBanReason(""); qc.invalidateQueries({ queryKey: ["forum-user-roles"] }); },
@@ -212,7 +214,7 @@ function UsersPanel() {
 
   const unban = useMutation({
     mutationFn: async (id: string) => {
-      const { error } = await supabase.from("profiles").update({ forum_banned_until: null, forum_ban_reason: null }).eq("id", id);
+      const { error } = await supabase.from("profile_moderation").upsert({ user_id: id, forum_banned_until: null, forum_ban_reason: null });
       if (error) throw error;
     },
     onSuccess: () => { toast.success("Unbanned"); qc.invalidateQueries({ queryKey: ["forum-user-roles"] }); },
