@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
@@ -29,13 +29,10 @@ function SettingsPage() {
   });
 
   const [username, setUsername] = useState("");
-  const [publicName, setPublicName] = useState("");
 
-  // Pre-fill once loaded
-  useState(() => {
+  useEffect(() => {
     if (profile?.username) setUsername(profile.username);
-    if (profile?.public_name) setPublicName(profile.public_name);
-  });
+  }, [profile]);
 
   const saveUsername = useMutation({
     mutationFn: async () => {
@@ -45,16 +42,6 @@ function SettingsPage() {
       if (error) { if (error.code === "23505") throw new Error("That username is already taken"); throw error; }
     },
     onSuccess: () => { toast.success("Username updated!"); qc.invalidateQueries({ queryKey: ["my-profile"] }); },
-    onError: (e: any) => toast.error(e.message),
-  });
-
-  const savePublicName = useMutation({
-    mutationFn: async () => {
-      if (!user) throw new Error("Not signed in");
-      const { error } = await supabase.from("profiles").update({ public_name: publicName.trim() || null }).eq("id", user.id);
-      if (error) throw error;
-    },
-    onSuccess: () => { toast.success("Display name updated!"); qc.invalidateQueries({ queryKey: ["my-profile"] }); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -79,16 +66,6 @@ function SettingsPage() {
             <p className="text-xs text-muted-foreground mt-1">3-30 characters. Letters, numbers, underscores only.</p>
           </div>
           <Button onClick={() => saveUsername.mutate()} disabled={saveUsername.isPending}>Save username</Button>
-        </Card>
-
-        <Card className="p-5 space-y-3">
-          <h2 className="font-semibold">Public display name</h2>
-          <p className="text-sm text-muted-foreground">Shown on the Editors page and community loadouts instead of your real account name.</p>
-          <div>
-            <Label>Display name</Label>
-            <Input value={publicName} onChange={(e) => setPublicName(e.target.value)} placeholder="Optional" />
-          </div>
-          <Button onClick={() => savePublicName.mutate()} disabled={savePublicName.isPending}>Save display name</Button>
         </Card>
       </div>
     </Page>
