@@ -131,7 +131,7 @@ function ApprovalQueue() {
 function FlagsPanel() {
   const qc = useQueryClient();
 
-  const { data: flags } = useQuery({
+  const { data: contentFlags } = useQuery({
     queryKey: ["forum-flags"],
     queryFn: async () => {
       const { data } = await supabase.from("forum_flags")
@@ -141,12 +141,29 @@ function FlagsPanel() {
     },
   });
 
+  const { data: pmFlags } = useQuery({
+    queryKey: ["pm-flags"],
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("private_messages")
+        .select(`
+          *,
+          sender:profiles!sender_id(username),
+          receiver:profiles!receiver_id(username),
+          reporter:profiles!flagged_by(username)
+        `)
+        .eq("is_flagged", true)
+        .order("created_at", { ascending: false });
+      return data || [];
+    },
+  });
+
   const resolve = useMutation({
     mutationFn: async ({ id, valid }: { id: string; valid: boolean }) => {
       const { error } = await supabase.from("forum_flags").update({ resolved: true, resolved_valid: valid }).eq("id", id);
       if (error) throw error;
       if (valid) {
-        const flag = flags?.find((f: any) => f.id === id);
+        const flag = contentFlags?.find((f: any) => f.id === id);
         if (flag?.post_id) await supabase.from("forum_posts").update({ status: "deleted" }).eq("id", flag.post_id);
         if (flag?.comment_id) await supabase.from("forum_comments").update({ status: "deleted" }).eq("id", flag.comment_id);
       }
@@ -155,32 +172,66 @@ function FlagsPanel() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const resolvePM = useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase.from("private_messages").update({ is_flagged: false, flagged_by: null }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => { toast.success("PM flag dismissed"); qc.invalidateQueries({ queryKey: ["pm-flags"] }); },
+    onError: (e: any) => toast.error(e.message),
+  });
+
   return (
-    <div className="space-y-2">
-      {(!flags || flags.length === 0) && <p className="text-sm text-muted-foreground">No open flags.</p>}
-      {flags?.map((f: any) => (
-        <Card key={f.id} className="p-3">
-          <div className="flex items-start gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="text-xs text-muted-foreground mb-1">Flagged by {f.reporter?.username} · Reason: {f.reason}</div>
-              {f.post && (
-                <Link to="/forum/post/$id" params={{ id: f.post.id }} className="block group">
-                  <p className="text-sm font-medium group-hover:text-primary group-hover:underline">Post: {f.post.title}</p>
-                </Link>
-              )}
-              {f.comment && (
-                <Link to="/forum/post/$id" params={{ id: f.comment.post_id }} className="block group">
-                  <p className="text-sm group-hover:text-primary group-hover:underline">Comment: {f.comment.body}</p>
-                </Link>
-              )}
-            </div>
-            <div className="flex gap-1 shrink-0">
-              <Button size="sm" variant="destructive" onClick={() => resolve.mutate({ id: f.id, valid: true })}>Remove content</Button>
-              <Button size="sm" variant="outline" onClick={() => resolve.mutate({ id: f.id, valid: false })}>Dismiss</Button>
-            </div>
-          </div>
-        </Card>
-      ))}
+    <div className="space-y-6">
+      <div>
+        <h3 className="font-semibold mb-3">Content Flags</h3>
+        <div className="space-y-2">
+          {(!contentFlags || contentFlags.length === 0) && <p className="text-sm text-muted-foreground">No open flags.</p>}
+          {contentFlags?.map((f: any) => (
+            <Card key={f.id} className="p-3">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-muted-foreground mb-1">Flagged by {f.reporter?.username} · Reason: {f.reason}</div>
+                  {f.post && (
+                    <Link to="/forum/post/$id" params={{ id: f.post.id }} className="block group">
+                      <p className="text-sm font-medium group-hover:text-primary group-hover:underline">Post: {f.post.title}</p>
+                    </Link>
+                  )}
+                  {f.comment && (
+                    <Link to="/forum/post/$id" params={{ id: f.comment.post_id }} className="block group">
+                      <p className="text-sm group-hover:text-primary group-hover:underline">Comment: {f.comment.body}</p>
+                    </Link>
+                  )}
+                </div>
+                <div className="flex gap-1 shrink-0">
+                  <Button size="sm" variant="destructive" onClick={() => resolve.mutate({ id: f.id, valid: true })}>Remove content</Button>
+                  <Button size="sm" variant="outline" onClick={() => resolve.mutate({ id: f.id, valid: false })}>Dismiss</Button>
+                </div>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <h3 className="font-semibold mb-3">Flagged Private Messages</h3>
+        <div className="space-y-2">
+          {(!pmFlags || pmFlags.length === 0) && <p className="text-sm text-muted-foreground">No flagged messages.</p>}
+          {pmFlags?.map((f: any) => (
+            <Card key={f.id} className="p-3 border-destructive/20 bg-destructive/5">
+              <div className="flex items-start gap-3">
+                <div className="flex-1 min-w-0">
+                  <div className="text-xs text-muted-foreground mb-1">
+                    Flagged by {f.reporter?.username} · From {f.sender?.username} to {f.receiver?.username}
+                  </div>
+                  <p className="text-sm bg-background p-2 rounded border">{f.body}</p>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => resolvePM.mutate(f.id)}>Dismiss</Button>
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
@@ -254,11 +305,11 @@ function UsersPanel() {
             <Select value={u.trust_level || "basic"} onValueChange={(v) => updateTrust.mutate({ id: u.id, trust_level: v })}>
               <SelectTrigger className="w-40"><SelectValue /></SelectTrigger>
               <SelectContent>
-                <SelectItem value="basic">Basic</SelectItem>
-                <SelectItem value="semi_trusted">Semi-Trusted</SelectItem>
-                <SelectItem value="trusted">Trusted</SelectItem>
-                <SelectItem value="basic_moderator">Basic Moderator</SelectItem>
-                <SelectItem value="trusted_moderator">Trusted Moderator</SelectItem>
+                <SelectItem value="basic">Basic (Tier 1)</SelectItem>
+                <SelectItem value="semi_trusted">Semi-Trusted (Tier 2)</SelectItem>
+                <SelectItem value="trusted">Trusted (Tier 3)</SelectItem>
+                <SelectItem value="basic_moderator">Basic Moderator (Tier 4)</SelectItem>
+                <SelectItem value="trusted_moderator">Trusted Moderator (Tier 5)</SelectItem>
               </SelectContent>
             </Select>
             {isBanned ? (
