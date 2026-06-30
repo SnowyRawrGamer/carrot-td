@@ -1,7 +1,7 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { MessageSquare, Plus, Pin } from "lucide-react";
+import { MessageSquare, Plus, Pin, Settings } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -88,7 +88,14 @@ function ForumIndex() {
     <Page>
       <div className="flex flex-wrap items-end justify-between gap-4 mb-6">
         <div>
-          <h1 className="text-3xl font-bold">Forum</h1>
+          <div className="flex items-center gap-2">
+            <h1 className="text-3xl font-bold">Forum</h1>
+            <Button variant="ghost" size="icon" asChild className="h-8 w-8">
+              <Link to="/settings">
+                <Settings className="h-5 w-5 text-muted-foreground" />
+              </Link>
+            </Button>
+          </div>
           <p className="text-muted-foreground text-sm mt-1">Discuss Carrot TD with the community.</p>
         </div>
         {user && (
