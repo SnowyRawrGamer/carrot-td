@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as FeedbackRouteImport } from './routes/feedback'
 import { Route as DailyVaultRouteImport } from './routes/daily-vault'
 import { Route as AuthRouteImport } from './routes/auth'
@@ -20,6 +21,7 @@ import { Route as SummonsIndexRouteImport } from './routes/summons.index'
 import { Route as MapsIndexRouteImport } from './routes/maps.index'
 import { Route as LoadoutsIndexRouteImport } from './routes/loadouts.index'
 import { Route as GamemodesIndexRouteImport } from './routes/gamemodes.index'
+import { Route as ForumIndexRouteImport } from './routes/forum.index'
 import { Route as EditorsIndexRouteImport } from './routes/editors.index'
 import { Route as ChestsIndexRouteImport } from './routes/chests.index'
 import { Route as UpdatesSlugRouteImport } from './routes/updates.$slug'
@@ -27,11 +29,18 @@ import { Route as UnitsSlugRouteImport } from './routes/units.$slug'
 import { Route as SummonsSlugRouteImport } from './routes/summons.$slug'
 import { Route as MapsSlugRouteImport } from './routes/maps.$slug'
 import { Route as GamemodesSlugRouteImport } from './routes/gamemodes.$slug'
+import { Route as ForumNewRouteImport } from './routes/forum.new'
 import { Route as ChestsSlugRouteImport } from './routes/chests.$slug'
 import { Route as AuthenticatedAdminRouteImport } from './routes/_authenticated/admin'
 import { Route as LoadoutsCommunityIndexRouteImport } from './routes/loadouts.community.index'
 import { Route as LoadoutsCommunityIdRouteImport } from './routes/loadouts.community.$id'
+import { Route as ForumPostIdRouteImport } from './routes/forum.post.$id'
 
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const FeedbackRoute = FeedbackRouteImport.update({
   id: '/feedback',
   path: '/feedback',
@@ -86,6 +95,11 @@ const GamemodesIndexRoute = GamemodesIndexRouteImport.update({
   path: '/gamemodes/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForumIndexRoute = ForumIndexRouteImport.update({
+  id: '/forum/',
+  path: '/forum/',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const EditorsIndexRoute = EditorsIndexRouteImport.update({
   id: '/editors/',
   path: '/editors/',
@@ -121,6 +135,11 @@ const GamemodesSlugRoute = GamemodesSlugRouteImport.update({
   path: '/gamemodes/$slug',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForumNewRoute = ForumNewRouteImport.update({
+  id: '/forum/new',
+  path: '/forum/new',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ChestsSlugRoute = ChestsSlugRouteImport.update({
   id: '/chests/$slug',
   path: '/chests/$slug',
@@ -141,14 +160,21 @@ const LoadoutsCommunityIdRoute = LoadoutsCommunityIdRouteImport.update({
   path: '/loadouts/community/$id',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ForumPostIdRoute = ForumPostIdRouteImport.update({
+  id: '/forum/post/$id',
+  path: '/forum/post/$id',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
+  '/settings': typeof SettingsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
+  '/forum/new': typeof ForumNewRoute
   '/gamemodes/$slug': typeof GamemodesSlugRoute
   '/maps/$slug': typeof MapsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
@@ -156,12 +182,14 @@ export interface FileRoutesByFullPath {
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests/': typeof ChestsIndexRoute
   '/editors/': typeof EditorsIndexRoute
+  '/forum/': typeof ForumIndexRoute
   '/gamemodes/': typeof GamemodesIndexRoute
   '/loadouts/': typeof LoadoutsIndexRoute
   '/maps/': typeof MapsIndexRoute
   '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
   '/updates/': typeof UpdatesIndexRoute
+  '/forum/post/$id': typeof ForumPostIdRoute
   '/loadouts/community/$id': typeof LoadoutsCommunityIdRoute
   '/loadouts/community/': typeof LoadoutsCommunityIndexRoute
 }
@@ -170,8 +198,10 @@ export interface FileRoutesByTo {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
+  '/settings': typeof SettingsRoute
   '/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
+  '/forum/new': typeof ForumNewRoute
   '/gamemodes/$slug': typeof GamemodesSlugRoute
   '/maps/$slug': typeof MapsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
@@ -179,12 +209,14 @@ export interface FileRoutesByTo {
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests': typeof ChestsIndexRoute
   '/editors': typeof EditorsIndexRoute
+  '/forum': typeof ForumIndexRoute
   '/gamemodes': typeof GamemodesIndexRoute
   '/loadouts': typeof LoadoutsIndexRoute
   '/maps': typeof MapsIndexRoute
   '/summons': typeof SummonsIndexRoute
   '/units': typeof UnitsIndexRoute
   '/updates': typeof UpdatesIndexRoute
+  '/forum/post/$id': typeof ForumPostIdRoute
   '/loadouts/community/$id': typeof LoadoutsCommunityIdRoute
   '/loadouts/community': typeof LoadoutsCommunityIndexRoute
 }
@@ -195,8 +227,10 @@ export interface FileRoutesById {
   '/auth': typeof AuthRoute
   '/daily-vault': typeof DailyVaultRoute
   '/feedback': typeof FeedbackRoute
+  '/settings': typeof SettingsRoute
   '/_authenticated/admin': typeof AuthenticatedAdminRoute
   '/chests/$slug': typeof ChestsSlugRoute
+  '/forum/new': typeof ForumNewRoute
   '/gamemodes/$slug': typeof GamemodesSlugRoute
   '/maps/$slug': typeof MapsSlugRoute
   '/summons/$slug': typeof SummonsSlugRoute
@@ -204,12 +238,14 @@ export interface FileRoutesById {
   '/updates/$slug': typeof UpdatesSlugRoute
   '/chests/': typeof ChestsIndexRoute
   '/editors/': typeof EditorsIndexRoute
+  '/forum/': typeof ForumIndexRoute
   '/gamemodes/': typeof GamemodesIndexRoute
   '/loadouts/': typeof LoadoutsIndexRoute
   '/maps/': typeof MapsIndexRoute
   '/summons/': typeof SummonsIndexRoute
   '/units/': typeof UnitsIndexRoute
   '/updates/': typeof UpdatesIndexRoute
+  '/forum/post/$id': typeof ForumPostIdRoute
   '/loadouts/community/$id': typeof LoadoutsCommunityIdRoute
   '/loadouts/community/': typeof LoadoutsCommunityIndexRoute
 }
@@ -220,8 +256,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
+    | '/settings'
     | '/admin'
     | '/chests/$slug'
+    | '/forum/new'
     | '/gamemodes/$slug'
     | '/maps/$slug'
     | '/summons/$slug'
@@ -229,12 +267,14 @@ export interface FileRouteTypes {
     | '/updates/$slug'
     | '/chests/'
     | '/editors/'
+    | '/forum/'
     | '/gamemodes/'
     | '/loadouts/'
     | '/maps/'
     | '/summons/'
     | '/units/'
     | '/updates/'
+    | '/forum/post/$id'
     | '/loadouts/community/$id'
     | '/loadouts/community/'
   fileRoutesByTo: FileRoutesByTo
@@ -243,8 +283,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
+    | '/settings'
     | '/admin'
     | '/chests/$slug'
+    | '/forum/new'
     | '/gamemodes/$slug'
     | '/maps/$slug'
     | '/summons/$slug'
@@ -252,12 +294,14 @@ export interface FileRouteTypes {
     | '/updates/$slug'
     | '/chests'
     | '/editors'
+    | '/forum'
     | '/gamemodes'
     | '/loadouts'
     | '/maps'
     | '/summons'
     | '/units'
     | '/updates'
+    | '/forum/post/$id'
     | '/loadouts/community/$id'
     | '/loadouts/community'
   id:
@@ -267,8 +311,10 @@ export interface FileRouteTypes {
     | '/auth'
     | '/daily-vault'
     | '/feedback'
+    | '/settings'
     | '/_authenticated/admin'
     | '/chests/$slug'
+    | '/forum/new'
     | '/gamemodes/$slug'
     | '/maps/$slug'
     | '/summons/$slug'
@@ -276,12 +322,14 @@ export interface FileRouteTypes {
     | '/updates/$slug'
     | '/chests/'
     | '/editors/'
+    | '/forum/'
     | '/gamemodes/'
     | '/loadouts/'
     | '/maps/'
     | '/summons/'
     | '/units/'
     | '/updates/'
+    | '/forum/post/$id'
     | '/loadouts/community/$id'
     | '/loadouts/community/'
   fileRoutesById: FileRoutesById
@@ -292,7 +340,9 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   DailyVaultRoute: typeof DailyVaultRoute
   FeedbackRoute: typeof FeedbackRoute
+  SettingsRoute: typeof SettingsRoute
   ChestsSlugRoute: typeof ChestsSlugRoute
+  ForumNewRoute: typeof ForumNewRoute
   GamemodesSlugRoute: typeof GamemodesSlugRoute
   MapsSlugRoute: typeof MapsSlugRoute
   SummonsSlugRoute: typeof SummonsSlugRoute
@@ -300,18 +350,27 @@ export interface RootRouteChildren {
   UpdatesSlugRoute: typeof UpdatesSlugRoute
   ChestsIndexRoute: typeof ChestsIndexRoute
   EditorsIndexRoute: typeof EditorsIndexRoute
+  ForumIndexRoute: typeof ForumIndexRoute
   GamemodesIndexRoute: typeof GamemodesIndexRoute
   LoadoutsIndexRoute: typeof LoadoutsIndexRoute
   MapsIndexRoute: typeof MapsIndexRoute
   SummonsIndexRoute: typeof SummonsIndexRoute
   UnitsIndexRoute: typeof UnitsIndexRoute
   UpdatesIndexRoute: typeof UpdatesIndexRoute
+  ForumPostIdRoute: typeof ForumPostIdRoute
   LoadoutsCommunityIdRoute: typeof LoadoutsCommunityIdRoute
   LoadoutsCommunityIndexRoute: typeof LoadoutsCommunityIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/feedback': {
       id: '/feedback'
       path: '/feedback'
@@ -389,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamemodesIndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forum/': {
+      id: '/forum/'
+      path: '/forum'
+      fullPath: '/forum/'
+      preLoaderRoute: typeof ForumIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/editors/': {
       id: '/editors/'
       path: '/editors'
@@ -438,6 +504,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof GamemodesSlugRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forum/new': {
+      id: '/forum/new'
+      path: '/forum/new'
+      fullPath: '/forum/new'
+      preLoaderRoute: typeof ForumNewRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/chests/$slug': {
       id: '/chests/$slug'
       path: '/chests/$slug'
@@ -466,6 +539,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LoadoutsCommunityIdRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/forum/post/$id': {
+      id: '/forum/post/$id'
+      path: '/forum/post/$id'
+      fullPath: '/forum/post/$id'
+      preLoaderRoute: typeof ForumPostIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -486,7 +566,9 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   DailyVaultRoute: DailyVaultRoute,
   FeedbackRoute: FeedbackRoute,
+  SettingsRoute: SettingsRoute,
   ChestsSlugRoute: ChestsSlugRoute,
+  ForumNewRoute: ForumNewRoute,
   GamemodesSlugRoute: GamemodesSlugRoute,
   MapsSlugRoute: MapsSlugRoute,
   SummonsSlugRoute: SummonsSlugRoute,
@@ -494,12 +576,14 @@ const rootRouteChildren: RootRouteChildren = {
   UpdatesSlugRoute: UpdatesSlugRoute,
   ChestsIndexRoute: ChestsIndexRoute,
   EditorsIndexRoute: EditorsIndexRoute,
+  ForumIndexRoute: ForumIndexRoute,
   GamemodesIndexRoute: GamemodesIndexRoute,
   LoadoutsIndexRoute: LoadoutsIndexRoute,
   MapsIndexRoute: MapsIndexRoute,
   SummonsIndexRoute: SummonsIndexRoute,
   UnitsIndexRoute: UnitsIndexRoute,
   UpdatesIndexRoute: UpdatesIndexRoute,
+  ForumPostIdRoute: ForumPostIdRoute,
   LoadoutsCommunityIdRoute: LoadoutsCommunityIdRoute,
   LoadoutsCommunityIndexRoute: LoadoutsCommunityIndexRoute,
 }
