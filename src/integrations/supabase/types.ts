@@ -791,14 +791,48 @@ export type Database = {
           },
         ]
       }
+      profile_moderation: {
+        Row: {
+          forum_ban_reason: string | null
+          forum_banned_until: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          forum_ban_reason?: string | null
+          forum_banned_until?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          forum_ban_reason?: string | null
+          forum_banned_until?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "profile_moderation_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "profile_moderation_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: true
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profiles: {
         Row: {
           avatar_url: string | null
           created_at: string
           display_name: string | null
           email: string | null
-          forum_ban_reason: string | null
-          forum_banned_until: string | null
           help_points: number
           id: string
           public_name: string | null
@@ -810,8 +844,6 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
-          forum_ban_reason?: string | null
-          forum_banned_until?: string | null
           help_points?: number
           id: string
           public_name?: string | null
@@ -823,8 +855,6 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
-          forum_ban_reason?: string | null
-          forum_banned_until?: string | null
           help_points?: number
           id?: string
           public_name?: string | null
