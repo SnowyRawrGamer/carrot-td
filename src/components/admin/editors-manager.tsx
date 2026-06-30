@@ -13,19 +13,33 @@ type RoleKind = "owner" | "editor" | "viewer";
 export function EditorsManager() {
   const qc = useQueryClient();
   const [edits, setEdits] = useState<Record<string, string>>({});
-  const { data: rows } = useQuery({
+  const { data: rows, isLoading } = useQuery({
     queryKey: ["all-users-roles"],
     queryFn: async () => {
-      const { data: profiles, error } = await supabase.rpc("admin_list_profiles");
-      if (error) throw error;
-      profiles?.sort((a: any, b: any) => (a.email || "").localeCompare(b.email || ""));
-      const ids = (profiles || []).map((p) => p.id);
+      // First try to get profiles. If RPC fails, fallback to simple select
+      let profiles: any[] = [];
+      const { data: rpcProfiles, error: rpcError } = await supabase.rpc("admin_list_profiles");
+      
+      if (rpcError) {
+        console.warn("admin_list_profiles RPC failed, falling back to profiles table", rpcError);
+        const { data: tableProfiles, error: tableError } = await supabase.from("profiles").select("id, email, display_name, public_name");
+        if (tableError) throw tableError;
+        profiles = tableProfiles || [];
+      } else {
+        profiles = rpcProfiles || [];
+      }
+
+      profiles.sort((a: any, b: any) => (a.email || "").localeCompare(b.email || ""));
+      const ids = profiles.map((p) => p.id);
+      
       const { data: roles } = ids.length
         ? await supabase.from("user_roles").select("id, user_id, role").in("user_id", ids)
         : { data: [] as any[] };
+        
       const roleMap = new Map<string, { id: string; role: RoleKind }>();
       for (const r of roles || []) roleMap.set(r.user_id, { id: r.id, role: r.role as RoleKind });
-      return (profiles || []).map((p) => ({
+      
+      return profiles.map((p) => ({
         ...p,
         role: (roleMap.get(p.id)?.role ?? "viewer") as RoleKind,
         roleRowId: roleMap.get(p.id)?.id ?? null,
@@ -72,7 +86,9 @@ export function EditorsManager() {
       </div>
 
       <div className="grid gap-2">
-        {(rows || []).map((u) => (
+        {isLoading ? (
+          <div className="text-sm text-muted-foreground">Loading users...</div>
+        ) : (rows || []).map((u) => (
           <Card key={u.id} className="p-3 flex items-center gap-3 flex-wrap">
             <Shield
               className={`h-5 w-5 ${
@@ -115,7 +131,7 @@ export function EditorsManager() {
             </Select>
           </Card>
         ))}
-        {rows && rows.length === 0 && (
+        {rows && rows.length === 0 && !isLoading && (
           <Card className="p-4 text-sm text-muted-foreground">No users found.</Card>
         )}
       </div>
