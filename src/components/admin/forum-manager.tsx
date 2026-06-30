@@ -10,6 +10,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { Link } from "@tanstack/react-router";
 
 export function ForumManager() {
   return (
@@ -79,7 +80,9 @@ function ApprovalQueue() {
             <Card key={p.id} className="p-3">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="font-medium">{p.title}</div>
+                  <Link to="/forum/post/$id" params={{ id: p.id }} className="font-medium hover:underline block mb-1">
+                    {p.title}
+                  </Link>
                   <div className="text-xs text-muted-foreground">by {p.author?.username} · {new Date(p.created_at).toLocaleDateString()}</div>
                   <p className="text-sm mt-1 line-clamp-3">{p.body}</p>
                   {p.image_url && <img src={p.image_url} alt="" className="mt-2 rounded max-h-32 object-cover" />}
@@ -102,7 +105,13 @@ function ApprovalQueue() {
             <Card key={c.id} className="p-3">
               <div className="flex items-start gap-3">
                 <div className="flex-1 min-w-0">
-                  <div className="text-xs text-muted-foreground">by {c.author?.username} on "{c.post?.title}" · {new Date(c.created_at).toLocaleDateString()}</div>
+                  <div className="text-xs text-muted-foreground mb-1">
+                    by {c.author?.username} on 
+                    <Link to="/forum/post/$id" params={{ id: c.post_id }} className="ml-1 font-medium hover:underline italic">
+                      "{c.post?.title}"
+                    </Link>
+                    {" "}· {new Date(c.created_at).toLocaleDateString()}
+                  </div>
                   <p className="text-sm mt-1">{c.body}</p>
                   {c.image_url && <img src={c.image_url} alt="" className="mt-2 rounded max-h-32 object-cover" />}
                 </div>
@@ -126,7 +135,7 @@ function FlagsPanel() {
     queryKey: ["forum-flags"],
     queryFn: async () => {
       const { data } = await supabase.from("forum_flags")
-        .select("*, reporter:profiles!user_id(username), post:forum_posts(title, body), comment:forum_comments(body)")
+        .select("*, reporter:profiles!user_id(username), post:forum_posts(id, title, body), comment:forum_comments(id, body, post_id)")
         .eq("resolved", false).order("created_at");
       return data || [];
     },
@@ -154,8 +163,16 @@ function FlagsPanel() {
           <div className="flex items-start gap-3">
             <div className="flex-1 min-w-0">
               <div className="text-xs text-muted-foreground mb-1">Flagged by {f.reporter?.username} · Reason: {f.reason}</div>
-              {f.post && <p className="text-sm font-medium">Post: {f.post.title}</p>}
-              {f.comment && <p className="text-sm">Comment: {f.comment.body}</p>}
+              {f.post && (
+                <Link to="/forum/post/$id" params={{ id: f.post.id }} className="block group">
+                  <p className="text-sm font-medium group-hover:text-primary group-hover:underline">Post: {f.post.title}</p>
+                </Link>
+              )}
+              {f.comment && (
+                <Link to="/forum/post/$id" params={{ id: f.comment.post_id }} className="block group">
+                  <p className="text-sm group-hover:text-primary group-hover:underline">Comment: {f.comment.body}</p>
+                </Link>
+              )}
             </div>
             <div className="flex gap-1 shrink-0">
               <Button size="sm" variant="destructive" onClick={() => resolve.mutate({ id: f.id, valid: true })}>Remove content</Button>
