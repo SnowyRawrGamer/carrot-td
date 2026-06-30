@@ -11,6 +11,7 @@ import { LoadoutsManager } from "@/components/admin/loadouts-manager";
 import { NotesManager } from "@/components/admin/notes-manager";
 import { SimpleManager } from "@/components/admin/simple-manager";
 import { Shield } from "lucide-react";
+import { ForumManager } from "@/components/admin/forum-manager";
 
 export const Route = createFileRoute("/_authenticated/admin")({
   head: () => ({ meta: [{ title: "Admin — Carrot TD Values" }] }),
@@ -56,6 +57,7 @@ function AdminPage() {
           <TabsTrigger value="gamemodes">Gamemodes</TabsTrigger>
           <TabsTrigger value="loadouts">Loadouts</TabsTrigger>
           <TabsTrigger value="notes">Notes</TabsTrigger>
+          <TabsTrigger value="forum">Forum</TabsTrigger>
           {owner && <TabsTrigger value="editors">Editors</TabsTrigger>}
           {owner && <TabsTrigger value="logs">Logs</TabsTrigger>}
         </TabsList>
@@ -67,6 +69,7 @@ function AdminPage() {
         <TabsContent value="gamemodes" className="mt-6"><SimpleManager kind="gamemodes" /></TabsContent>
         <TabsContent value="loadouts" className="mt-6"><LoadoutsManager /></TabsContent>
         <TabsContent value="notes" className="mt-6"><NotesManager /></TabsContent>
+        <TabsContent value="forum" className="mt-6"><ForumManager /></TabsContent>
         {owner && <TabsContent value="editors" className="mt-6"><EditorsManager /></TabsContent>}
         {owner && <TabsContent value="logs" className="mt-6"><AuditLog /></TabsContent>}
       </Tabs>
