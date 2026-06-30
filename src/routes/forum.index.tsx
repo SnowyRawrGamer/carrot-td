@@ -1,12 +1,14 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import { useState } from "react";
-import { MessageSquare, Plus, Pin, Settings } from "lucide-react";
+import { MessageSquare, Plus, Pin, Settings, Info, Mail } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { InboxDrawer } from "@/components/forum/InboxDrawer";
 
 export const Route = createFileRoute("/forum/")({
   head: () => ({ meta: [{ title: "Forum — Carrot TD Values" }] }),
@@ -16,13 +18,24 @@ export const Route = createFileRoute("/forum/")({
 function trustLabel(level: string) {
   if (level === "trusted_moderator" || level === "basic_moderator") return "Moderator";
   if (level === "trusted") return "Trusted";
-  return null;
+  if (level === "semi_trusted") return "Semi-Trusted";
+  return "New";
 }
 
 function ForumIndex() {
   const { user } = useAuth();
   const [tagFilter, setTagFilter] = useState<string | null>(null);
   const [sort, setSort] = useState<"newest" | "activity">("newest");
+  const [inboxOpen, setInboxOpen] = useState(false);
+
+  const { data: profile } = useQuery({
+    queryKey: ["my-profile", user?.id],
+    enabled: !!user,
+    queryFn: async () => {
+      const { data } = await supabase.from("profiles").select("username, trust_level").eq("id", user!.id).single();
+      return data;
+    },
+  });
 
   const { data: tags } = useQuery({
     queryKey: ["forum-tags"],
@@ -71,7 +84,7 @@ function ForumIndex() {
             <div className="font-semibold truncate">{p.title}</div>
             <div className="text-xs text-muted-foreground mt-0.5">
               by <span className="font-medium">{p.author?.username || "Unknown"}</span>
-              {label && <span className="ml-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">{label}</span>}
+              {label !== "New" && <span className="ml-1 px-1.5 py-0.5 rounded bg-primary/10 text-primary text-[10px]">{label}</span>}
               {" "}· {new Date(p.created_at).toLocaleDateString()}
             </div>
           </div>
@@ -95,12 +108,56 @@ function ForumIndex() {
                 <Settings className="h-5 w-5 text-muted-foreground" />
               </Link>
             </Button>
+            <Dialog>
+              <DialogTrigger asChild>
+                <Button variant="ghost" size="icon" className="h-8 w-8">
+                  <Info className="h-5 w-5 text-muted-foreground" />
+                </Button>
+              </DialogTrigger>
+              <DialogContent className="max-w-md">
+                <DialogHeader><DialogTitle>Trust Levels</DialogTitle></DialogHeader>
+                <div className="space-y-4 text-sm">
+                  <div className="border-l-4 border-muted p-3 bg-muted/20">
+                    <p className="font-bold">Tier 1 (New)</p>
+                    <p className="text-muted-foreground">Posts & comments need approval before appearing.</p>
+                  </div>
+                  <div className="border-l-4 border-blue-500 p-3 bg-blue-500/5">
+                    <p className="font-bold text-blue-500">Tier 2 (Semi-Trusted)</p>
+                    <p className="text-muted-foreground">Comments appear instantly, posts need approval.</p>
+                  </div>
+                  <div className="border-l-4 border-green-500 p-3 bg-green-500/5">
+                    <p className="font-bold text-green-500">Tier 3 (Trusted)</p>
+                    <p className="text-muted-foreground">All posts & comments appear instantly. Can edit own posts. Can use Private Messaging (with other trusted users).</p>
+                  </div>
+                  <div className="border-l-4 border-primary p-3 bg-primary/5">
+                    <p className="font-bold text-primary">Tier 4 (Basic Mod)</p>
+                    <p className="text-muted-foreground">Can approve pending content, pin posts, message anyone, and review flagged private messages.</p>
+                  </div>
+                  <div className="border-l-4 border-primary p-3 bg-primary/10">
+                    <p className="font-bold text-primary">Tier 5 (Owner/Mod)</p>
+                    <p className="text-muted-foreground">Full administrative control.</p>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
           </div>
           <p className="text-muted-foreground text-sm mt-1">Discuss Carrot TD with the community.</p>
+          {profile && (
+            <p className="text-[10px] uppercase tracking-wider font-bold text-muted-foreground mt-2 bg-muted/50 inline-block px-2 py-0.5 rounded">
+              Your Level: <span className="text-primary">{trustLabel(profile.trust_level)}</span>
+            </p>
+          )}
         </div>
-        {user && (
-          <Button asChild><Link to="/forum/new"><Plus className="h-4 w-4 mr-1" /> New post</Link></Button>
-        )}
+        <div className="flex gap-2">
+          {user && (
+            <Button variant="outline" onClick={() => setInboxOpen(true)}>
+              <Mail className="h-4 w-4 mr-2" /> Messages
+            </Button>
+          )}
+          {user && (
+            <Button asChild><Link to="/forum/new"><Plus className="h-4 w-4 mr-1" /> New post</Link></Button>
+          )}
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-4">
@@ -133,6 +190,8 @@ function ForumIndex() {
           <Card className="p-10 text-center text-muted-foreground">No posts yet. Be the first!</Card>
         ) : regular.map((p: any) => <PostRow key={p.id} p={p} />)}
       </div>
+
+      <InboxDrawer open={inboxOpen} onOpenChange={setInboxOpen} />
     </Page>
   );
 }
