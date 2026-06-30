@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Heart, Flag, Trash2 } from "lucide-react";
+import { ArrowLeft, Heart, Flag, Trash2, Pin, Edit2, X, Check } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -43,6 +43,10 @@ function ForumPost() {
   const [flagReason, setFlagReason] = useState("");
   const [flagTarget, setFlagTarget] = useState<{ type: "post" | "comment"; id: string } | null>(null);
 
+  const [isEditingPost, setIsEditingPost] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editBody, setEditBody] = useState("");
+
   const { data: profile } = useQuery<any>({
     queryKey: ["my-profile", user?.id],
     enabled: !!user,
@@ -63,12 +67,21 @@ function ForumPost() {
       const { data: comments } = await supabase.from("forum_comments")
         .select("*, author:profiles!author_id(id, username, trust_level)")
         .eq("post_id", id).eq("status", "approved").order("created_at");
-      const { data: likes } = await supabase.from("forum_likes").select("id, post_id, comment_id, user_id").or(`post_id.eq.${id},comment_id.in.(${(comments || []).map((c: any) => c.id).join(",")||"null"})`);
+      const { data: likes } = await supabase.from("forum_likes").select("*").or(`post_id.eq.${id},comment_id.in.(${(comments || []).map((c: any) => c.id).join(",")||"null"})`);
       return { post, comments: comments || [], likes: likes || [] };
     },
   });
 
+  useEffect(() => {
+    if (data?.post) {
+      setEditTitle(data.post.title);
+      setEditBody(data.post.body);
+    }
+  }, [data?.post]);
+
   const isStaff = ["basic_moderator","trusted_moderator"].includes(profile?.trust_level || "");
+  const canPin = ["trusted_moderator", "basic_moderator"].includes(profile?.trust_level || "") || profile?.trust_level === "trusted";
+  const canEdit = ["trusted", "trusted_moderator", "basic_moderator"].includes(profile?.trust_level || "");
 
   const postComment = useMutation({
     mutationFn: async () => {
@@ -98,12 +111,46 @@ function ForumPost() {
       const col = type === "post" ? "post_id" : "comment_id";
       const existing = data?.likes.find((l: any) => l.user_id === user.id && l[col] === targetId);
       if (existing) {
-        await supabase.from("forum_likes").delete().eq("id", existing.id);
+        const { error } = await supabase.from("forum_likes").delete().eq("id", existing.id);
+        if (error) throw error;
       } else {
-        await supabase.from("forum_likes").insert({ user_id: user.id, [col]: targetId } as any);
+        const { error } = await supabase.from("forum_likes").insert({ user_id: user.id, [col]: targetId });
+        if (error) throw error;
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["forum-post", id] }),
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const togglePin = useMutation({
+    mutationFn: async () => {
+      if (!canPin) throw new Error("Unauthorized");
+      const { error } = await supabase.from("forum_posts").update({ pinned: !data?.post.pinned }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success(data?.post.pinned ? "Post unpinned" : "Post pinned");
+      qc.invalidateQueries({ queryKey: ["forum-post", id] });
+    },
+    onError: (e: any) => toast.error(e.message),
+  });
+
+  const saveEdit = useMutation({
+    mutationFn: async () => {
+      if (!user || (user.id !== data?.post.author_id && !isStaff)) throw new Error("Unauthorized");
+      if (!editTitle.trim() || !editBody.trim()) throw new Error("Fields required");
+      const { error } = await supabase.from("forum_posts").update({
+        title: editTitle.trim(),
+        body: editBody.trim(),
+        updated_at: new Date().toISOString(),
+      }).eq("id", id);
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      toast.success("Post updated");
+      setIsEditingPost(false);
+      qc.invalidateQueries({ queryKey: ["forum-post", id] });
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -149,17 +196,41 @@ function ForumPost() {
 
       <Card className="p-5 mb-6">
         <div className="flex items-start justify-between gap-3 mb-3">
-          <h1 className="text-2xl font-bold">{post.title}</h1>
-          {isStaff && (
-            <Button size="icon" variant="ghost" onClick={() => deleteContent.mutate({ type: "post", targetId: post.id })}>
-              <Trash2 className="h-4 w-4 text-destructive" />
-            </Button>
+          {isEditingPost ? (
+            <div className="flex-1 space-y-3">
+              <Input value={editTitle} onChange={(e) => setEditTitle(e.target.value)} />
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <h1 className="text-2xl font-bold">{post.title}</h1>
+              {post.pinned && <Pin className="h-4 w-4 text-primary fill-primary" />}
+            </div>
           )}
+          <div className="flex items-center gap-1">
+            {canPin && (
+              <Button size="icon" variant="ghost" onClick={() => togglePin.mutate()} disabled={togglePin.isPending}>
+                <Pin className={`h-4 w-4 ${post.pinned ? "text-primary fill-primary" : "text-muted-foreground"}`} />
+              </Button>
+            )}
+            {canEdit && user?.id === post.author?.id && !isEditingPost && (
+              <Button size="icon" variant="ghost" onClick={() => setIsEditingPost(true)}>
+                <Edit2 className="h-4 w-4 text-muted-foreground" />
+              </Button>
+            )}
+            {isStaff && (
+              <Button size="icon" variant="ghost" onClick={() => deleteContent.mutate({ type: "post", targetId: post.id })}>
+                <Trash2 className="h-4 w-4 text-destructive" />
+              </Button>
+            )}
+          </div>
         </div>
         <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
           <span className="font-medium text-foreground">{post.author?.username}</span>
           {postAuthorLabel && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{postAuthorLabel}</span>}
           <span>· {new Date(post.created_at).toLocaleDateString()}</span>
+          {post.updated_at !== post.created_at && (
+            <span className="italic text-[10px]">(edited)</span>
+          )}
         </div>
         {post.tags?.length > 0 && (
           <div className="flex gap-1 mb-4 flex-wrap">
@@ -168,18 +239,34 @@ function ForumPost() {
             ))}
           </div>
         )}
-        <p className="whitespace-pre-wrap text-sm">{post.body}</p>
+        {isEditingPost ? (
+          <div className="space-y-3">
+            <Textarea rows={6} value={editBody} onChange={(e) => setEditBody(e.target.value)} />
+            <div className="flex gap-2">
+              <Button size="sm" onClick={() => saveEdit.mutate()} disabled={saveEdit.isPending}>
+                <Check className="h-4 w-4 mr-1" /> Save
+              </Button>
+              <Button size="sm" variant="outline" onClick={() => setIsEditingPost(false)}>
+                <X className="h-4 w-4 mr-1" /> Cancel
+              </Button>
+            </div>
+          </div>
+        ) : (
+          <p className="whitespace-pre-wrap text-sm">{post.body}</p>
+        )}
         {post.image_url && <img src={post.image_url} alt="" className="mt-4 rounded-md max-h-96 object-contain" />}
-        <div className="flex gap-2 mt-4">
-          <Button size="sm" variant={myPostLike ? "default" : "outline"} onClick={() => toggleLike.mutate({ type: "post", targetId: post.id })}>
-            <Heart className="h-4 w-4 mr-1" /> {postLikeCount}
-          </Button>
-          {user && user.id !== post.author?.id && (
-            <Button size="sm" variant="ghost" onClick={() => setFlagTarget({ type: "post", id: post.id })}>
-              <Flag className="h-4 w-4 mr-1" /> Flag
+        {!isEditingPost && (
+          <div className="flex gap-2 mt-4">
+            <Button size="sm" variant={myPostLike ? "default" : "outline"} onClick={() => toggleLike.mutate({ type: "post", targetId: post.id })}>
+              <Heart className={`h-4 w-4 mr-1 ${myPostLike ? "fill-current" : ""}`} /> {postLikeCount}
             </Button>
-          )}
-        </div>
+            {user && user.id !== post.author?.id && (
+              <Button size="sm" variant="ghost" onClick={() => setFlagTarget({ type: "post", id: post.id })}>
+                <Flag className="h-4 w-4 mr-1" /> Flag
+              </Button>
+            )}
+          </div>
+        )}
       </Card>
 
       <div className="space-y-3 mb-6">
@@ -204,7 +291,7 @@ function ForumPost() {
               {c.image_url && <img src={c.image_url} alt="" className="mt-2 rounded-md max-h-60 object-contain" />}
               <div className="flex gap-2 mt-2">
                 <Button size="sm" variant={myCommentLike ? "default" : "ghost"} onClick={() => toggleLike.mutate({ type: "comment", targetId: c.id })}>
-                  <Heart className="h-3 w-3 mr-1" /> {commentLikeCount}
+                  <Heart className={`h-3 w-3 mr-1 ${myCommentLike ? "fill-current" : ""}`} /> {commentLikeCount}
                 </Button>
                 {user && user.id !== c.author?.id && (
                   <Button size="sm" variant="ghost" onClick={() => setFlagTarget({ type: "comment", id: c.id })}>
@@ -231,7 +318,7 @@ function ForumPost() {
         </BanCheck>
       ) : (
         <Card className="p-4 text-center text-sm text-muted-foreground">
-          <Link to="/login" className="text-primary underline">Sign in</Link> to leave a reply.
+          <Link to="/auth" className="text-primary underline">Sign in</Link> to leave a reply.
         </Card>
       )}
 
