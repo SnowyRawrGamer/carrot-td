@@ -30,7 +30,7 @@ export function InboxDrawer({
 
   const { data: profile } = useQuery({
     queryKey: ["my-profile", user?.id],
-    enabled: !!user,
+    enabled: !!user && open, // Only fetch when drawer is open
     queryFn: async () => {
       const { data } = await supabase.from("profiles").select("trust_level").eq("id", user!.id).single();
       return data;
@@ -51,7 +51,10 @@ export function InboxDrawer({
         .or(`sender_id.eq.${user!.id},receiver_id.eq.${user!.id}`)
         .order("created_at", { ascending: false });
 
-      if (error) throw error;
+      if (error) {
+        console.error("Conversations fetch error:", error);
+        throw error;
+      }
 
       const map = new Map<string, { userId: string; username: string; lastMessage: string; date: string }>();
       for (const m of (data || [])) {
@@ -80,7 +83,10 @@ export function InboxDrawer({
         `)
         .or(`and(sender_id.eq.${user!.id},receiver_id.eq.${selectedUser}),and(sender_id.eq.${selectedUser},receiver_id.eq.${user!.id})`)
         .order("created_at", { ascending: true });
-      if (error) throw error;
+      if (error) {
+        console.error("Messages fetch error:", error);
+        throw error;
+      }
       return data || [];
     },
   });
@@ -137,7 +143,9 @@ export function InboxDrawer({
         </SheetHeader>
 
         <div className="flex-1 overflow-y-auto">
-          {loadingConvs ? (
+          {!user ? (
+             <div className="p-8 text-center text-sm text-muted-foreground">Please sign in to view messages.</div>
+          ) : loadingConvs && !conversations ? (
             <div className="p-8 flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
           ) : !selectedUser ? (
             <div className="divide-y">
@@ -159,7 +167,7 @@ export function InboxDrawer({
             </div>
           ) : (
             <div className="p-4 space-y-4">
-              {loadingMsgs ? (
+              {loadingMsgs && !messages ? (
                 <div className="flex justify-center"><Loader2 className="h-6 w-6 animate-spin text-muted-foreground" /></div>
               ) : messages?.map((m) => (
                 <div key={m.id} className={`flex flex-col ${m.sender_id === user!.id ? "items-end" : "items-start"}`}>
@@ -175,6 +183,9 @@ export function InboxDrawer({
                   </div>
                 </div>
               ))}
+              {messages?.length === 0 && !loadingMsgs && (
+                <div className="text-center text-xs text-muted-foreground py-4">No messages yet.</div>
+              )}
             </div>
           )}
         </div>
