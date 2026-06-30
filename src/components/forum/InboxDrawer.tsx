@@ -1,19 +1,32 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { X, Send, Flag, Loader2, User } from "lucide-react";
+import { X, Send, Flag, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
-import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 
-export function InboxDrawer({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+export function InboxDrawer({ 
+  open, 
+  onOpenChange, 
+  initialTargetUser 
+}: { 
+  open: boolean; 
+  onOpenChange: (open: boolean) => void;
+  initialTargetUser?: string | null;
+}) {
   const { user } = useAuth();
   const qc = useQueryClient();
   const [selectedUser, setSelectedUser] = useState<string | null>(null);
   const [messageBody, setMessageBody] = useState("");
+
+  useEffect(() => {
+    if (initialTargetUser) {
+      setSelectedUser(initialTargetUser);
+    }
+  }, [initialTargetUser]);
 
   const { data: profile } = useQuery({
     queryKey: ["my-profile", user?.id],
@@ -40,7 +53,6 @@ export function InboxDrawer({ open, onOpenChange }: { open: boolean; onOpenChang
 
       if (error) throw error;
 
-      // Group by other user
       const map = new Map<string, { userId: string; username: string; lastMessage: string; date: string }>();
       for (const m of (data || [])) {
         const other = m.sender_id === user!.id ? m.receiver : m.sender;
@@ -92,7 +104,7 @@ export function InboxDrawer({ open, onOpenChange }: { open: boolean; onOpenChang
     onError: (e: any) => toast.error(e.message)
   });
 
-  const flag = useMutation({
+  const flagMessage = useMutation({
     mutationFn: async (msgId: string) => {
       const { error } = await supabase
         .from("private_messages")
@@ -157,7 +169,7 @@ export function InboxDrawer({ open, onOpenChange }: { open: boolean; onOpenChang
                   <div className="flex items-center gap-2 mt-1 px-1">
                     <span className="text-[10px] text-muted-foreground">{new Date(m.created_at).toLocaleTimeString()}</span>
                     {m.sender_id !== user!.id && !m.is_flagged && (
-                      <button onClick={() => flag.mutate(m.id)} className="text-[10px] text-muted-foreground hover:text-destructive">Flag</button>
+                      <button onClick={() => flagMessage.mutate(m.id)} className="text-[10px] text-muted-foreground hover:text-destructive">Flag</button>
                     )}
                     {m.is_flagged && <span className="text-[10px] text-destructive font-bold">Flagged</span>}
                   </div>
