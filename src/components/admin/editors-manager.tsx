@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
-import { Shield } from "lucide-react";
+import { Shield, Search } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -13,6 +13,8 @@ type RoleKind = "owner" | "editor" | "viewer";
 export function EditorsManager() {
   const qc = useQueryClient();
   const [edits, setEdits] = useState<Record<string, string>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  
   const { data: rows, isLoading } = useQuery({
     queryKey: ["all-users-roles"],
     queryFn: async () => {
@@ -22,7 +24,7 @@ export function EditorsManager() {
       
       if (rpcError) {
         console.warn("admin_list_profiles RPC failed, falling back to profiles table", rpcError);
-        const { data: tableProfiles, error: tableError } = await supabase.from("profiles").select("id, email, display_name, public_name");
+        const { data: tableProfiles, error: tableError } = await supabase.from("profiles").select("id, email, display_name, public_name, username");
         if (tableError) throw tableError;
         profiles = tableProfiles || [];
       } else {
@@ -75,20 +77,41 @@ export function EditorsManager() {
     onError: (e: any) => toast.error(e.message),
   });
 
+  const filteredRows = (rows || []).filter((u) => {
+    const query = searchQuery.toLowerCase();
+    return (
+      (u.username?.toLowerCase() || "").includes(query) ||
+      (u.email?.toLowerCase() || "").includes(query) ||
+      (u.display_name?.toLowerCase() || "").includes(query) ||
+      (u.public_name?.toLowerCase() || "").includes(query)
+    );
+  });
+
   return (
     <div className="space-y-4">
-      <div>
-        <h2 className="text-xl font-bold">Users & roles</h2>
-        <p className="text-sm text-muted-foreground">
-          Every signed-in user shows here. Owners can promote anyone to editor or owner, and set the
-          public display name shown on the Editors page.
-        </p>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-bold">Users & roles</h2>
+          <p className="text-sm text-muted-foreground">
+            Every signed-in user shows here. Owners can promote anyone to editor or owner, and set the
+            public display name shown on the Editors page.
+          </p>
+        </div>
+        <div className="relative w-full sm:w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by username/email..."
+            className="pl-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
       </div>
 
       <div className="grid gap-2">
         {isLoading ? (
           <div className="text-sm text-muted-foreground">Loading users...</div>
-        ) : (rows || []).map((u) => (
+        ) : filteredRows.map((u) => (
           <Card key={u.id} className="p-3 flex items-center gap-3 flex-wrap">
             <Shield
               className={`h-5 w-5 ${
@@ -96,7 +119,7 @@ export function EditorsManager() {
               }`}
             />
             <div className="flex-1 min-w-0">
-              <div className="font-medium truncate">{u.display_name || u.email || u.id}</div>
+              <div className="font-medium truncate">{u.username || u.display_name || u.email || u.id}</div>
               <div className="text-xs text-muted-foreground">{u.email}</div>
             </div>
 
@@ -131,8 +154,8 @@ export function EditorsManager() {
             </Select>
           </Card>
         ))}
-        {rows && rows.length === 0 && !isLoading && (
-          <Card className="p-4 text-sm text-muted-foreground">No users found.</Card>
+        {filteredRows.length === 0 && !isLoading && (
+          <Card className="p-4 text-sm text-muted-foreground">No users found{searchQuery ? ` matching "${searchQuery}"` : ""}.</Card>
         )}
       </div>
     </div>
