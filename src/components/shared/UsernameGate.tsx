@@ -16,6 +16,7 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
   const { data: profile, isLoading } = useQuery({
     queryKey: ["my-profile", user?.id],
     enabled: !!user,
+    staleTime: Infinity, // Ensure we don't refetch and potentially cause a loop
     queryFn: async () => {
       const { data, error } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
       if (error) throw error;
@@ -33,18 +34,26 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
         throw error;
       }
     },
-    onSuccess: () => { toast.success("Username set!"); qc.invalidateQueries({ queryKey: ["my-profile"] }); },
+    onSuccess: () => { 
+      toast.success("Username set!"); 
+      qc.setQueryData(["my-profile", user?.id], { username: value.trim() });
+      qc.invalidateQueries({ queryKey: ["my-profile"] }); 
+    },
     onError: (e: any) => toast.error(e.message),
   });
 
+  // If we're loading or there's no user, just show content
   if (!user || isLoading) return <>{children}</>;
+  
+  // If user has a username, show content
   if (profile?.username) return <>{children}</>;
 
+  // Only show the dialog if we're sure the user doesn't have a username
   return (
     <>
       {children}
       <Dialog open>
-        <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()}>
+        <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
           <DialogHeader>
             <DialogTitle>Choose your username</DialogTitle>
           </DialogHeader>
