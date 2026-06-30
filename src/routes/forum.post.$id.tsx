@@ -43,23 +43,27 @@ function ForumPost() {
   const [flagReason, setFlagReason] = useState("");
   const [flagTarget, setFlagTarget] = useState<{ type: "post" | "comment"; id: string } | null>(null);
 
-  const { data: profile } = useQuery({
+  const { data: profile } = useQuery<any>({
     queryKey: ["my-profile", user?.id],
     enabled: !!user,
-    queryFn: async () => (await supabase.from("profiles").select("username, trust_level, forum_banned_until, forum_ban_reason").eq("id", user!.id).single()).data,
+    queryFn: async () => {
+      const { data: p } = await supabase.from("profiles").select("username, trust_level").eq("id", user!.id).single();
+      const { data: m } = await supabase.from("profile_moderation").select("forum_banned_until, forum_ban_reason").eq("user_id", user!.id).maybeSingle();
+      return { ...(p || {}), forum_banned_until: m?.forum_banned_until ?? null, forum_ban_reason: m?.forum_ban_reason ?? null };
+    },
   });
 
   const { data } = useQuery({
     queryKey: ["forum-post", id],
     queryFn: async () => {
-      await supabase.rpc("increment_view_count", { post_id: id }).catch(() => {});
+      try { await supabase.rpc("increment_view_count", { post_id: id }); } catch {}
       const { data: post } = await supabase.from("forum_posts")
         .select("*, author:profiles!author_id(id, username, trust_level), tags:forum_post_tags(tag:forum_tags(id, name, color))")
         .eq("id", id).single();
       const { data: comments } = await supabase.from("forum_comments")
         .select("*, author:profiles!author_id(id, username, trust_level)")
         .eq("post_id", id).eq("status", "approved").order("created_at");
-      const { data: likes } = await supabase.from("forum_likes").select("post_id, comment_id, user_id").or(`post_id.eq.${id},comment_id.in.(${(comments || []).map((c: any) => c.id).join(",")||"null"})`);
+      const { data: likes } = await supabase.from("forum_likes").select("id, post_id, comment_id, user_id").or(`post_id.eq.${id},comment_id.in.(${(comments || []).map((c: any) => c.id).join(",")||"null"})`);
       return { post, comments: comments || [], likes: likes || [] };
     },
   });
@@ -96,7 +100,7 @@ function ForumPost() {
       if (existing) {
         await supabase.from("forum_likes").delete().eq("id", existing.id);
       } else {
-        await supabase.from("forum_likes").insert({ user_id: user.id, [col]: targetId });
+        await supabase.from("forum_likes").insert({ user_id: user.id, [col]: targetId } as any);
       }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ["forum-post", id] }),

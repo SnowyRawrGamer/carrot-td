@@ -72,7 +72,7 @@ function FeedbackPage() {
         .from("site_notes")
         .insert({
           title: `${category}: ${body.substring(0, 40)}${body.length > 40 ? '...' : ''}`,
-          body: `User: ${user.email}\n\n${body}`,
+          body: body,
           status: "viewer_ideas",
           created_by: user.id
         })
@@ -111,7 +111,7 @@ function FeedbackPage() {
           .from("site_notes")
           .update({
             title: `${category}: ${body.substring(0, 40)}${body.length > 40 ? '...' : ''}`,
-            body: `User: ${user?.email}\n\n${body}`,
+            body: body,
             updated_at: new Date().toISOString()
           })
           .eq("id", noteId);

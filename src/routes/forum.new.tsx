@@ -25,10 +25,14 @@ function NewPost() {
   const [imageUrl, setImageUrl] = useState("");
   const [selectedTags, setSelectedTags] = useState<string[]>([]);
 
-  const { data: profile } = useQuery({
+  const { data: profile } = useQuery<any>({
     queryKey: ["my-profile", user?.id],
     enabled: !!user,
-    queryFn: async () => (await supabase.from("profiles").select("username, trust_level, forum_banned_until, forum_ban_reason").eq("id", user!.id).single()).data,
+    queryFn: async () => {
+      const { data: p } = await supabase.from("profiles").select("username, trust_level").eq("id", user!.id).single();
+      const { data: m } = await supabase.from("profile_moderation").select("forum_banned_until, forum_ban_reason").eq("user_id", user!.id).maybeSingle();
+      return { ...(p || {}), forum_banned_until: m?.forum_banned_until ?? null, forum_ban_reason: m?.forum_ban_reason ?? null };
+    },
   });
 
   const { data: tags } = useQuery({
