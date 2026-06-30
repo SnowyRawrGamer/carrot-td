@@ -68,7 +68,17 @@ function ForumPost() {
         .select("*, author:profiles!author_id(id, username, trust_level)")
         .eq("post_id", id).eq("status", "approved").order("created_at");
       const { data: likes } = await supabase.from("forum_likes").select("*").or(`post_id.eq.${id},comment_id.in.(${(comments || []).map((c: any) => c.id).join(",")||"null"})`);
-      return { post, comments: comments || [], likes: likes || [] };
+      
+      let myFlags: any[] = [];
+      if (user) {
+        const { data: f } = await supabase.from("forum_flags")
+          .select("id, post_id, comment_id")
+          .eq("user_id", user.id)
+          .eq("resolved", false);
+        myFlags = f || [];
+      }
+
+      return { post, comments: comments || [], likes: likes || [], myFlags };
     },
   });
 
@@ -157,13 +167,19 @@ function ForumPost() {
   const submitFlag = useMutation({
     mutationFn: async () => {
       if (!user || !flagTarget || !flagReason.trim()) throw new Error("Reason required");
+      
+      const col = flagTarget.type === "post" ? "post_id" : "comment_id";
+      const alreadyFlagged = data?.myFlags.some((f: any) => f[col] === flagTarget.id);
+      if (alreadyFlagged) throw new Error(`You have already flagged this ${flagTarget.type}`);
+
       const payload: any = { user_id: user.id, reason: flagReason.trim() };
       if (flagTarget.type === "post") payload.post_id = flagTarget.id;
       else payload.comment_id = flagTarget.id;
+      
       const { error } = await supabase.from("forum_flags").insert(payload);
       if (error) throw error;
     },
-    onSuccess: () => { toast.success("Flagged for review"); setFlagTarget(null); setFlagReason(""); },
+    onSuccess: () => { toast.success("Flagged for review"); setFlagTarget(null); setFlagReason(""); qc.invalidateQueries({ queryKey: ["forum-post", id] }); },
     onError: (e: any) => toast.error(e.message),
   });
 
@@ -183,10 +199,11 @@ function ForumPost() {
   });
 
   if (!data?.post) return <Page><div className="text-muted-foreground">Loading...</div></Page>;
-  const { post, comments, likes } = data;
+  const { post, comments, likes, myFlags } = data;
   const postLikeCount = likes.filter((l: any) => l.post_id === post.id).length;
   const myPostLike = user && likes.find((l: any) => l.post_id === post.id && l.user_id === user.id);
   const postAuthorLabel = trustLabel(post.author?.trust_level || "");
+  const alreadyFlaggedPost = myFlags.some((f: any) => f.post_id === post.id);
 
   return (
     <Page>
@@ -261,8 +278,8 @@ function ForumPost() {
               <Heart className={`h-4 w-4 mr-1 ${myPostLike ? "fill-current" : ""}`} /> {postLikeCount}
             </Button>
             {user && user.id !== post.author?.id && (
-              <Button size="sm" variant="ghost" onClick={() => setFlagTarget({ type: "post", id: post.id })}>
-                <Flag className="h-4 w-4 mr-1" /> Flag
+              <Button size="sm" variant={alreadyFlaggedPost ? "secondary" : "ghost"} onClick={() => !alreadyFlaggedPost && setFlagTarget({ type: "post", id: post.id })} disabled={alreadyFlaggedPost}>
+                <Flag className={`h-4 w-4 mr-1 ${alreadyFlaggedPost ? "fill-current" : ""}`} /> {alreadyFlaggedPost ? "Flagged" : "Flag"}
               </Button>
             )}
           </div>
@@ -275,6 +292,7 @@ function ForumPost() {
           const commentLikeCount = likes.filter((l: any) => l.comment_id === c.id).length;
           const myCommentLike = user && likes.find((l: any) => l.comment_id === c.id && l.user_id === user.id);
           const commentAuthorLabel = trustLabel(c.author?.trust_level || "");
+          const alreadyFlaggedComment = myFlags.some((f: any) => f.comment_id === c.id);
           return (
             <Card key={c.id} className="p-4">
               <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
@@ -294,8 +312,8 @@ function ForumPost() {
                   <Heart className={`h-3 w-3 mr-1 ${myCommentLike ? "fill-current" : ""}`} /> {commentLikeCount}
                 </Button>
                 {user && user.id !== c.author?.id && (
-                  <Button size="sm" variant="ghost" onClick={() => setFlagTarget({ type: "comment", id: c.id })}>
-                    <Flag className="h-3 w-3 mr-1" /> Flag
+                  <Button size="sm" variant={alreadyFlaggedComment ? "secondary" : "ghost"} onClick={() => !alreadyFlaggedComment && setFlagTarget({ type: "comment", id: c.id })} disabled={alreadyFlaggedComment}>
+                    <Flag className={`h-3 w-3 mr-1 ${alreadyFlaggedComment ? "fill-current" : ""}`} /> {alreadyFlaggedComment ? "Flagged" : "Flag"}
                   </Button>
                 )}
               </div>
