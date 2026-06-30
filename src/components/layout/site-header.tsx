@@ -14,8 +14,7 @@ const navItems = [
   { to: "/units", label: "Units" },
   { to: "/summons", label: "Summons" },
   { to: "/chests", label: "Chests" },
-  { to: "/updates", label: "Updates" },
-  { to: "/feedback", label: "Feedback" },
+  { to: "/forum", label: "Forum" },
 ];
 
 export function SiteHeader() {
@@ -33,7 +32,7 @@ export function SiteHeader() {
           <span>Carrot TD <span className="text-muted-foreground font-normal">Values</span></span>
         </Link>
         <nav className="hidden md:flex items-center gap-1">
-          {navItems.slice(0, 3).map((n) => (
+          {navItems.map((n) => (
             <Link
               key={n.to}
               to={n.to}
@@ -58,22 +57,17 @@ export function SiteHeader() {
             </DropdownMenuContent>
           </DropdownMenu>
 
-          {navItems.slice(3).map((n) => (
-            <Link
-              key={n.to}
-              to={n.to}
-              className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent"
-              activeProps={{ className: "px-3 py-2 rounded-md text-sm font-medium text-foreground bg-accent" }}
-            >
-              {n.label}
-            </Link>
-          ))}
-
           <DropdownMenu>
             <DropdownMenuTrigger className="px-3 py-2 rounded-md text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-accent flex items-center gap-1 outline-none">
               Other <ChevronDown className="h-4 w-4" />
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
+              <DropdownMenuItem asChild>
+                <Link to="/updates">Updates</Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/feedback">Feedback</Link>
+              </DropdownMenuItem>
               <DropdownMenuItem asChild>
                 <Link to="/maps">Maps</Link>
               </DropdownMenuItem>
