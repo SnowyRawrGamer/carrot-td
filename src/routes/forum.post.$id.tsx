@@ -1,7 +1,7 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { ArrowLeft, Heart, Flag, Trash2, Pin, Edit2, X, Check } from "lucide-react";
+import { ArrowLeft, Heart, Flag, Trash2, Pin, Edit2, X, Check, Mail } from "lucide-react";
 import { Page } from "@/components/layout/page";
 import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/lib/auth";
 import { toast } from "sonner";
+import { InboxDrawer } from "@/components/forum/InboxDrawer";
 
 export const Route = createFileRoute("/forum/post/$id")({
   component: ForumPost,
@@ -18,6 +19,7 @@ export const Route = createFileRoute("/forum/post/$id")({
 function trustLabel(level: string) {
   if (level === "trusted_moderator" || level === "basic_moderator") return "Moderator";
   if (level === "trusted") return "Trusted";
+  if (level === "semi_trusted") return "Semi-Trusted";
   return null;
 }
 
@@ -46,6 +48,9 @@ function ForumPost() {
   const [isEditingPost, setIsEditingPost] = useState(false);
   const [editTitle, setEditTitle] = useState("");
   const [editBody, setEditBody] = useState("");
+  
+  const [inboxOpen, setInboxOpen] = useState(false);
+  const [targetPMUser, setTargetPMUser] = useState<string | null>(null);
 
   const { data: profile } = useQuery<any>({
     queryKey: ["my-profile", user?.id],
@@ -92,6 +97,22 @@ function ForumPost() {
   const isStaff = ["basic_moderator","trusted_moderator"].includes(profile?.trust_level || "");
   const canPin = ["trusted_moderator", "basic_moderator"].includes(profile?.trust_level || "") || profile?.trust_level === "trusted";
   const canEdit = ["trusted", "trusted_moderator", "basic_moderator"].includes(profile?.trust_level || "");
+
+  const canPM = (authorTrust: string) => {
+    if (!user) return false;
+    const myLevel = profile?.trust_level || "basic";
+    const isMyTrusted = ["trusted", "basic_moderator", "trusted_moderator"].includes(myLevel);
+    const isOtherTrusted = ["trusted", "basic_moderator", "trusted_moderator"].includes(authorTrust);
+    const isStaff = ["basic_moderator", "trusted_moderator"].includes(myLevel);
+    
+    // Moderators can message anyone, Trusted can message other Trusted
+    return isStaff || (isMyTrusted && isOtherTrusted);
+  };
+
+  const startPM = (userId: string) => {
+    setTargetPMUser(userId);
+    setInboxOpen(true);
+  };
 
   const postComment = useMutation({
     mutationFn: async () => {
@@ -248,6 +269,11 @@ function ForumPost() {
           {post.updated_at !== post.created_at && (
             <span className="italic text-[10px]">(edited)</span>
           )}
+          {user && post.author?.id !== user.id && canPM(post.author?.trust_level || "basic") && (
+            <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => startPM(post.author!.id)}>
+              <Mail className="h-3 w-3 mr-1" /> Message
+            </Button>
+          )}
         </div>
         {post.tags?.length > 0 && (
           <div className="flex gap-1 mb-4 flex-wrap">
@@ -299,6 +325,11 @@ function ForumPost() {
                 <span className="font-medium text-foreground">{c.author?.username}</span>
                 {commentAuthorLabel && <span className="text-[10px] px-1.5 py-0.5 rounded bg-primary/10 text-primary">{commentAuthorLabel}</span>}
                 <span>· {new Date(c.created_at).toLocaleDateString()}</span>
+                {user && c.author?.id !== user.id && canPM(c.author?.trust_level || "basic") && (
+                  <Button variant="ghost" size="sm" className="h-6 px-2 text-[10px]" onClick={() => startPM(c.author!.id)}>
+                    <Mail className="h-3 w-3 mr-1" /> Message
+                  </Button>
+                )}
                 {isStaff && (
                   <Button size="icon" variant="ghost" className="h-6 w-6 ml-auto" onClick={() => deleteContent.mutate({ type: "comment", targetId: c.id })}>
                     <Trash2 className="h-3 w-3 text-destructive" />
@@ -352,6 +383,8 @@ function ForumPost() {
           </Card>
         </div>
       )}
+
+      <InboxDrawer open={inboxOpen} onOpenChange={setInboxOpen} initialTargetUser={targetPMUser} />
     </Page>
   );
 }
