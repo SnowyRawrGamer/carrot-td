@@ -17,7 +17,8 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
     queryKey: ["my-profile", user?.id],
     enabled: !!user,
     queryFn: async () => {
-      const { data } = await supabase.from("profiles").select("username").eq("id", user!.id).single();
+      const { data, error } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
+      if (error) throw error;
       return data;
     },
   });
