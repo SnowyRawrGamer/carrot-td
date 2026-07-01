@@ -13,14 +13,15 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
   const [value, setValue] = useState("");
 
-  const { data: profile, isLoading } = useQuery({
-    queryKey: ["my-profile", user?.id],
+  const { data: username, isLoading, isError } = useQuery({
+    queryKey: ["my-username", user?.id],
     enabled: !!user,
-    staleTime: Infinity, // Ensure we don't refetch and potentially cause a loop
+    staleTime: 1000 * 60 * 5, // 5 minutes
+    retry: 2,
     queryFn: async () => {
-      const { data, error } = await supabase.from("profiles").select("username").eq("id", user!.id).maybeSingle();
+      const { data, error } = await supabase.rpc("get_my_username");
       if (error) throw error;
-      return data;
+      return data as string | null;
     },
   });
 
@@ -28,36 +29,51 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
     mutationFn: async () => {
       if (!user) throw new Error("Not signed in");
       if (!/^[a-zA-Z0-9_]{3,30}$/.test(value)) throw new Error("3-30 characters, letters/numbers/underscores only");
-      const { error } = await supabase.from("profiles").update({ username: value.trim() }).eq("id", user.id);
+      const { error } = await supabase
+        .from("profiles")
+        .update({ username: value.trim() })
+        .eq("id", user.id);
       if (error) {
         if (error.code === "23505") throw new Error("That username is already taken");
         throw error;
       }
+      return value.trim();
     },
-    onSuccess: () => { 
-      toast.success("Username set!"); 
-      qc.setQueryData(["my-profile", user?.id], { username: value.trim() });
-      qc.invalidateQueries({ queryKey: ["my-profile"] }); 
+    onSuccess: (savedUsername) => {
+      toast.success("Username set!");
+      // Immediately update cache so dialog closes without waiting for refetch
+      qc.setQueryData(["my-username", user?.id], savedUsername);
+      // Also update the profile query key used elsewhere
+      qc.setQueryData(["my-profile", user?.id], (old: any) => ({ ...(old || {}), username: savedUsername }));
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  // If we're loading or there's no user, just show content
+  // Not signed in or still loading → just show the app
   if (!user || isLoading) return <>{children}</>;
-  
-  // If user has a username, show content
-  if (profile?.username) return <>{children}</>;
 
-  // Only show the dialog if we're sure the user doesn't have a username
+  // If the query errored, don't block the user — they can set username from Settings
+  if (isError) return <>{children}</>;
+
+  // Username already set → nothing to do
+  if (username) return <>{children}</>;
+
+  // No username yet → show prompt
   return (
     <>
       {children}
       <Dialog open>
-        <DialogContent className="max-w-sm" onInteractOutside={(e) => e.preventDefault()} onEscapeKeyDown={(e) => e.preventDefault()}>
+        <DialogContent
+          className="max-w-sm"
+          onInteractOutside={(e) => e.preventDefault()}
+          onEscapeKeyDown={(e) => e.preventDefault()}
+        >
           <DialogHeader>
             <DialogTitle>Choose your username</DialogTitle>
           </DialogHeader>
-          <p className="text-sm text-muted-foreground">Pick a unique username to use on Carrot TD Values. You can change it later in Settings.</p>
+          <p className="text-sm text-muted-foreground">
+            Pick a unique username to use on Carrot TD Values. You can change it later in Settings.
+          </p>
           <div className="space-y-3">
             <div>
               <Label>Username</Label>
@@ -65,11 +81,18 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
                 value={value}
                 onChange={(e) => setValue(e.target.value)}
                 placeholder="e.g. CarrotKing99"
-                onKeyDown={(e) => e.key === "Enter" && save.mutate()}
+                onKeyDown={(e) => e.key === "Enter" && value.length >= 3 && save.mutate()}
+                autoFocus
               />
-              <p className="text-xs text-muted-foreground mt-1">3-30 characters. Letters, numbers, underscores only.</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                3-30 characters. Letters, numbers, underscores only.
+              </p>
             </div>
-            <Button className="w-full" onClick={() => save.mutate()} disabled={save.isPending || value.length < 3}>
+            <Button
+              className="w-full"
+              onClick={() => save.mutate()}
+              disabled={save.isPending || value.length < 3}
+            >
               {save.isPending ? "Saving..." : "Set username"}
             </Button>
           </div>
