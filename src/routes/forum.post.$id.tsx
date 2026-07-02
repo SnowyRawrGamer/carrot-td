@@ -145,7 +145,8 @@ function ForumPost() {
         const { error } = await supabase.from("forum_likes").delete().eq("id", existing.id);
         if (error) throw error;
       } else {
-        const { error } = await supabase.from("forum_likes").insert({ user_id: user.id, [col]: targetId });
+        const payload: any = { user_id: user.id, [col]: targetId };
+        const { error } = await supabase.from("forum_likes").insert(payload);
         if (error) throw error;
       }
     },
