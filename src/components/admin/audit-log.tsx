@@ -25,7 +25,7 @@ export function AuditLog() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("audit_log")
-        .select("id, table_name, record_label, changed_at, changes, changed_by, profiles:changed_by(display_name, email)")
+        .select("id, table_name, record_label, changed_at, changes, changed_by, profiles:changed_by(display_name)")
         .order("changed_at", { ascending: false })
         .limit(200);
       if (error) throw error;
