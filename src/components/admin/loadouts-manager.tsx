@@ -39,7 +39,7 @@ export function LoadoutsManager() {
         creatorIds.length
           ? supabase
               .from("profiles")
-              .select("id, display_name, email")
+              .select("id, display_name")
               .in("id", creatorIds)
           : Promise.resolve({ data: [] })
       ]);
