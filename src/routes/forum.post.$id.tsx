@@ -157,11 +157,11 @@ function ForumPost() {
   const togglePin = useMutation({
     mutationFn: async () => {
       if (!canPin) throw new Error("Unauthorized");
-      const { error } = await supabase.from("forum_posts").update({ pinned: !data?.post.pinned }).eq("id", id);
+      const { error } = await supabase.from("forum_posts").update({ pinned: !data?.post?.pinned }).eq("id", id);
       if (error) throw error;
     },
     onSuccess: () => {
-      toast.success(data?.post.pinned ? "Post unpinned" : "Post pinned");
+      toast.success(data?.post?.pinned ? "Post unpinned" : "Post pinned");
       qc.invalidateQueries({ queryKey: ["forum-post", id] });
     },
     onError: (e: any) => toast.error(e.message),
@@ -169,7 +169,7 @@ function ForumPost() {
 
   const saveEdit = useMutation({
     mutationFn: async () => {
-      if (!user || (user.id !== data?.post.author_id && !isStaff)) throw new Error("Unauthorized");
+      if (!user || (user.id !== data?.post?.author_id && !isStaff)) throw new Error("Unauthorized");
       if (!editTitle.trim() || !editBody.trim()) throw new Error("Fields required");
       const { error } = await supabase.from("forum_posts").update({
         title: editTitle.trim(),
