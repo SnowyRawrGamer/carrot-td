@@ -47,7 +47,7 @@ export function AuditLog() {
       ) : (
         <div className="space-y-2">
           {logs.map((log: any) => {
-            const who = log.profiles?.display_name || log.profiles?.email || "Unknown user";
+            const who = log.profiles?.display_name || "Unknown user";
             const itemLabel = `${TABLE_LABELS[log.table_name] || log.table_name}${log.record_label ? ` "${log.record_label}"` : ""}`;
             return (
               <Card key={log.id} className="p-3">
