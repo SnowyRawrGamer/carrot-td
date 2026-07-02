@@ -13,15 +13,20 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
   const qc = useQueryClient();
   const [value, setValue] = useState("");
 
-  const { data: username, isLoading, isError } = useQuery({
+  const { data: username, isLoading, isFetching, isError } = useQuery({
     queryKey: ["my-username", user?.id],
     enabled: !!user,
-    staleTime: 1000 * 60 * 5, // 5 minutes
-    retry: 2,
+    staleTime: 1000 * 60 * 10, // 10 minutes — don't refetch on every navigation
+    gcTime: 1000 * 60 * 30,    // keep in cache for 30 minutes
+    refetchOnWindowFocus: false, // don't re-run when tab regains focus
+    refetchOnMount: false,       // don't re-run on every component mount/navigation
+    retry: 1,
     queryFn: async () => {
       const { data, error } = await supabase.rpc("get_my_username");
       if (error) throw error;
-      return data as string | null;
+      // Return empty string instead of null so we can distinguish
+      // "loaded and no username" from "not loaded yet"
+      return (data as string | null) ?? "";
     },
   });
 
@@ -41,24 +46,25 @@ export function UsernameGate({ children }: { children: React.ReactNode }) {
     },
     onSuccess: (savedUsername) => {
       toast.success("Username set!");
-      // Immediately update cache so dialog closes without waiting for refetch
       qc.setQueryData(["my-username", user?.id], savedUsername);
-      // Also update the profile query key used elsewhere
       qc.setQueryData(["my-profile", user?.id], (old: any) => ({ ...(old || {}), username: savedUsername }));
     },
     onError: (e: any) => toast.error(e.message),
   });
 
-  // Not signed in or still loading → just show the app
-  if (!user || isLoading) return <>{children}</>;
+  // Not signed in → just show the app
+  if (!user) return <>{children}</>;
 
-  // If the query errored, don't block the user — they can set username from Settings
+  // Still loading OR fetching OR username is undefined (not yet resolved) → show app, no prompt
+  if (isLoading || isFetching || username === undefined) return <>{children}</>;
+
+  // Query errored → don't block, they can set from Settings
   if (isError) return <>{children}</>;
 
-  // Username already set → nothing to do
+  // Username is set (non-empty string) → nothing to do
   if (username) return <>{children}</>;
 
-  // No username yet → show prompt
+  // username is "" (empty string from DB null) → show prompt
   return (
     <>
       {children}
