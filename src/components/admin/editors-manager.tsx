@@ -23,8 +23,8 @@ export function EditorsManager() {
       const { data: rpcProfiles, error: rpcError } = await supabase.rpc("admin_list_profiles");
       
       if (rpcError) {
-        console.warn("admin_list_profiles RPC failed, falling back to profiles table", rpcError);
-        const { data: tableProfiles, error: tableError } = await supabase.from("profiles").select("id, email, display_name, public_name, username");
+        console.warn("admin_list_profiles RPC failed", rpcError);
+        const { data: tableProfiles, error: tableError } = await supabase.from("profiles").select("id, display_name, public_name, username");
         if (tableError) throw tableError;
         profiles = tableProfiles || [];
       } else {

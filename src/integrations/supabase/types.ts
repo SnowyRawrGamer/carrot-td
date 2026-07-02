@@ -791,6 +791,79 @@ export type Database = {
           },
         ]
       }
+      private_messages: {
+        Row: {
+          body: string
+          created_at: string
+          flagged_by: string | null
+          id: string
+          is_flagged: boolean
+          receiver_id: string
+          sender_id: string
+        }
+        Insert: {
+          body: string
+          created_at?: string
+          flagged_by?: string | null
+          id?: string
+          is_flagged?: boolean
+          receiver_id: string
+          sender_id: string
+        }
+        Update: {
+          body?: string
+          created_at?: string
+          flagged_by?: string | null
+          id?: string
+          is_flagged?: boolean
+          receiver_id?: string
+          sender_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "private_messages_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "private_messages_flagged_by_fkey"
+            columns: ["flagged_by"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "private_messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "private_messages_receiver_id_fkey"
+            columns: ["receiver_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "private_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "private_messages_sender_id_fkey"
+            columns: ["sender_id"]
+            isOneToOne: false
+            referencedRelation: "public_editors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       profile_moderation: {
         Row: {
           forum_ban_reason: string | null
@@ -1464,6 +1537,7 @@ export type Database = {
           public_name: string
         }[]
       }
+      get_my_username: { Args: never; Returns: string }
       increment_view_count: { Args: { post_id: string }; Returns: undefined }
     }
     Enums: {

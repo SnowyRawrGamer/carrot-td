@@ -25,7 +25,7 @@ export function AuditLog() {
     queryFn: async () => {
       const { data, error } = await supabase
         .from("audit_log")
-        .select("id, table_name, record_label, changed_at, changes, changed_by, profiles:changed_by(display_name, email)")
+        .select("id, table_name, record_label, changed_at, changes, changed_by, profiles:changed_by(display_name)")
         .order("changed_at", { ascending: false })
         .limit(200);
       if (error) throw error;
@@ -47,7 +47,7 @@ export function AuditLog() {
       ) : (
         <div className="space-y-2">
           {logs.map((log: any) => {
-            const who = log.profiles?.display_name || log.profiles?.email || "Unknown user";
+            const who = log.profiles?.display_name || "Unknown user";
             const itemLabel = `${TABLE_LABELS[log.table_name] || log.table_name}${log.record_label ? ` "${log.record_label}"` : ""}`;
             return (
               <Card key={log.id} className="p-3">
