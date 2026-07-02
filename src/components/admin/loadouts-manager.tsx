@@ -94,7 +94,7 @@ export function LoadoutsManager() {
   const approved = (loadouts || []).filter((l) => l.status === "approved");
 
   function Row({ l }: { l: any }) {
-    const creatorInfo = l.profiles?.display_name || l.profiles?.email || "Unknown User";
+    const creatorInfo = l.profiles?.display_name || "Unknown User";
     const who = l.show_real_name ? creatorInfo : (l.custom_display_name || "Anonymous");
     const isOpen = expanded === l.id;
     return (
